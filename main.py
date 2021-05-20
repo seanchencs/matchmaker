@@ -1,8 +1,7 @@
 import discord
 import os
 import random
-from replit import db
-from keep_alive import keep_alive
+import shelve
 import trueskill as ts
 import logging
 
@@ -12,17 +11,6 @@ logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-
-def db_string():
-  ret = ''
-  for k in db.keys():
-    ret += f'db[{k}] = {db[k]}\n'
-    print(type(db[k][0]))
-  return ret
-
-def clear_db():
-  for k in db.keys():
-    del db[k]
 
 # global userid lists
 ADMINS = [335828416412778496, 263745246821744640]
@@ -44,52 +32,78 @@ env.make_as_global()
 ratings_cache = {}
 
 # TrueSkill DB helper functions
-def get_skill(userid):
+def clear_db(guildid):
+    with shelve.open(str(guildid)) as db:
+        for id in db.keys():
+            del db[id]
+
+def db_string(guildid):
+    output = []
+    with shelve.open(str(guildid)) as db:
+        for id in db.keys():
+            output.append(id)
+            output.append(str(db[id]))
+    return ' '.join(output)
+
+def get_skill(userid, guildid):
     '''
     Returns the TrueSkill rating of a discord user.
     Will initialize skill if none is found.
     :param userid: Discord userid to find
     :return: stored TrueSkill rating object of userid
     '''
-    userid = int(userid)
-    # check cache first
-    if userid in ratings_cache:
-        return ratings_cache[userid]
-    print('Cache Miss: userid =', userid)
-    if userid in db.keys():
-        mu, sigma = db[userid]
-        return ts.Rating(float(mu), float(sigma))
-    new_rating = ts.Rating()
-    db[userid] = new_rating.mu, new_rating.sigma
-    ratings_cache[userid] = new_rating
-    return new_rating
+    userid = str(userid)
+    guildid = str(guildid)
 
-def record_result(winning_team, losing_team):
+    # check cache first
+    if guildid not in ratings_cache:
+            ratings_cache[guildid] = {}
+    if userid in ratings_cache[guildid]:
+        return ratings_cache[guildid][userid]
+    
+    print(f'Cache Miss: guildid = {guildid} userid = {userid}')
+
+    with shelve.open(str(guildid), writeback=True) as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
+        ratings = db['ratings']
+        if userid in ratings:
+            mu, sigma = ratings[userid]
+            return ts.Rating(float(mu), float(sigma))
+        new_rating = ts.Rating()
+        ratings_cache[guildid][userid] = new_rating
+        ratings[userid] = new_rating.mu, new_rating.sigma
+        db['ratings'][userid] = new_rating.mu, new_rating.sigma
+        return new_rating
+
+def record_result(winning_team, losing_team, guildid):
     '''
     Updates the TrueSkill ratings given a result.
     :param winning_team: list of userids of players on the winning team
     :param losing_team: list of userids of players on the losing team
     :return: old winning team ratings, old losing team ratings, new winning team ratings, new losing team ratings
     '''
-    winning_team_ratings = {id : get_skill(id) for id in winning_team}
-    losing_team_ratings = {id : get_skill(id) for id in losing_team}
+    winning_team_ratings = {id : get_skill(id, guildid) for id in winning_team}
+    losing_team_ratings = {id : get_skill(id, guildid) for id in losing_team}
     winning_team_ratings_new, losing_team_ratings_new = ts.rate([winning_team_ratings, losing_team_ratings], [0,1])
-    for id in winning_team_ratings:
-        ratings_cache[id] = winning_team_ratings_new[id]
-        db[id] = winning_team_ratings_new[id].mu, winning_team_ratings_new[id].sigma
-    for id in losing_team_ratings:
-        ratings_cache[id] = losing_team_ratings_new[id]
-        db[id] = losing_team_ratings_new[id].mu, losing_team_ratings_new[id].sigma
-    return winning_team_ratings, losing_team_ratings, winning_team_ratings_new, losing_team_ratings_new
+    with shelve.open(str(guildid), writeback=True) as db:
+        ratings = db['ratings']
+        for id in winning_team_ratings:
+            ratings_cache[str(guildid)][str(id)] = winning_team_ratings_new[id]
+            ratings[str(id)] = winning_team_ratings_new[id].mu, winning_team_ratings_new[id].sigma
+        for id in losing_team_ratings:
+            ratings_cache[str(guildid)][str(id)] = losing_team_ratings_new[id]
+            ratings[str(id)] = losing_team_ratings_new[id].mu, losing_team_ratings_new[id].sigma
+        return winning_team_ratings, losing_team_ratings, winning_team_ratings_new, losing_team_ratings_new
 
-def make_teams(players, pool=10):
+def make_teams(players, guildid, pool=10):
     '''
     Make teams based on rating.
     :param players: list of userid of participating players
     :param pool: number of matches to generate from which the best is chosen
     :return: t (list of userids), ct (list of userids), predicted quality of match
     '''
-    player_ratings = {id : get_skill(id) for id in players}
+    player_ratings = {id : get_skill(id, guildid) for id in players}
     t = ct = []
     best_quality = 0.0
     for i in range(pool):
@@ -104,19 +118,21 @@ def make_teams(players, pool=10):
             best_quality = quality
     return t, ct, best_quality
 
-def get_leaderboard():
+def get_leaderboard(guildid):
     '''
     Gets list of userids and TrueSkill ratings, sorted by current rating
     :return: list of (userid, TrueSkill.Rating) tuples, sorted by rating
     '''
-    ratings = {id : get_skill(id) for id in db.keys()}
-    return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
-
+    with shelve.open(str(guildid), writeback=True) as db:
+        if 'ratings' in db:
+            ratings = {id : ts.TrueSkill(db['ratings'][id][0], db['ratings'][id][1]) for id in db['ratings']}
+            #ratings = {id : get_skill(id, guildid) for id in db['ratings'].keys()}
+            return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
+        return None
 
 @client.event
 async def on_ready():
-    global ratings_cache
-    ratings_cache = {id : get_skill(id) for id in db.keys()}
+    # ratings_cache = {id : get_skill(id) for id in db.keys()}
     print('Logged in as {0.user}'.format(client))
 
 @client.event
@@ -180,6 +196,7 @@ async def on_message(message):
         return
 
     if message.content.startswith('$help'):
+        print(db_string(message.guild.id))
         output_string = "**Available Commands:**\n"
         output_string += "\t**$start** - start matchmaking process, bot sends message for players to react to\n"
         output_string += "\t\t**$unrated** - create random teams from reactions to $start message\n"
@@ -246,15 +263,15 @@ async def on_message(message):
                 await message.channel.send('must have **at least 2 players** for rated game')
                 return
             # create teams
-            t, ct, quality = make_teams(list(players))
+            t, ct, quality = make_teams(list(players), message.guild.id)
             # create output
             output_string = f'Predicted Quality: {round(quality*200, 2)}\n'
             output_string += "\nT:\n"
             for member in t:
-                output_string += f'\t<@!{member}>({round(get_skill(member).mu, 2)}) '
+                output_string += f'\t<@!{member}>({round(get_skill(member, message.guild.id).mu, 2)}) '
             output_string += "\n\nCT:\n"
             for member in ct:
-                output_string += f'\t<@!{member}>({round(get_skill(member).mu, 2)}) '
+                output_string += f'\t<@!{member}>({round(get_skill(member, message.guild.id).mu, 2)}) '
             # store teams
             guild_to_teams[message.guild.id]['t'] = t
             guild_to_teams[message.guild.id]['ct'] = ct
@@ -265,7 +282,7 @@ async def on_message(message):
         if not guild_to_teams[message.guild.id]['t']:
             await message.channel.send('use *$make* or *$rated* before recording a result')
         else:
-            t, ct, t_new, ct_new = record_result(guild_to_teams[message.guild.id]['t'], guild_to_teams[message.guild.id]['ct'])
+            t, ct, t_new, ct_new = record_result(guild_to_teams[message.guild.id]['t'], guild_to_teams[message.guild.id]['ct'], message.guild.id)
             output_string = '**Win for** ***T*** **recorded.**\n'
             output_string += "\n**T:**\n"
             for member in t:
@@ -280,7 +297,7 @@ async def on_message(message):
         if not guild_to_teams[message.guild.id]['ct']:
             await message.channel.send('use *$make* or *$rated* before recording a result')
         else:
-            ct, t, ct_new, t_new = record_result(guild_to_teams[message.guild.id]['ct'], guild_to_teams[message.guild.id]['t'])
+            ct, t, ct_new, t_new = record_result(guild_to_teams[message.guild.id]['ct'], guild_to_teams[message.guild.id]['t'], message.guild.id)
             output_string = '**Win for** ***CT*** **recorded.**\n'
             output_string += "\n**T:**\n"
             for member in t:
@@ -292,7 +309,7 @@ async def on_message(message):
             await message.channel.send(output_string)
 
     if message.content.startswith('$leaderboard'):
-        leaderboard = get_leaderboard()
+        leaderboard = get_leaderboard(message.guild.id)
         if not leaderboard:
             await message.channel.send('No Ranked Players.')
             return
@@ -372,11 +389,11 @@ async def on_message(message):
     if message.content.startswith('$rating'):
         if message.raw_mentions:
             for id in message.raw_mentions:
-                skill = get_skill(id)
+                skill = get_skill(id, message.guild.id)
                 await message.channel.send(f'\t<@!{id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n')
         else:
             authorid = message.author.id
-            skill = get_skill(authorid)
+            skill = get_skill(authorid, message.guild.id)
             await message.channel.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
 
     # remove csgo category and voice channels
@@ -404,7 +421,7 @@ async def on_message(message):
     # admin-only clearing of repl db
     if message.content.startswith('$cleardb'):
         if message.author.id in ADMINS:
-            clear_db()
+            clear_db(message.guild.id)
             await message.channel.send('Database cleared.')
         else:
             await message.channel.send('Permission denied.')
