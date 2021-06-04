@@ -4,6 +4,7 @@ import random
 import shelve
 import trueskill as ts
 import logging
+import time
 
 # set up logging
 logger = logging.getLogger('discord')
@@ -14,6 +15,9 @@ logger.addHandler(handler)
 
 # global userid lists
 ADMINS = [335828416412778496, 263745246821744640]
+
+# VALORANT MAPS
+VALORANT_MAP_POOL = ['Bind', 'Haven', 'Split', 'Ascent', 'Icebox', 'Breeze']
 
 # discord py client
 intents = discord.Intents.default()
@@ -76,6 +80,19 @@ def get_skill(userid, guildid):
         db['ratings'][userid] = new_rating.mu, new_rating.sigma
         return new_rating
 
+def set_rating(userid, rating, guildid):
+    userid = str(userid)
+    guildid = str(guildid)
+    # write to cache
+    if guildid not in ratings_cache:
+            ratings_cache[guildid] = {}
+    ratings_cache[guildid][userid] = rating
+    # write to shelve persistent db
+    with shelve.open(str(guildid), writeback=True) as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
+        db['ratings'][userid] = rating.mu, rating.sigma
+
 def record_result(winning_team, losing_team, guildid):
     '''
     Updates the TrueSkill ratings given a result.
@@ -132,7 +149,6 @@ def get_leaderboard(guildid):
 
 @client.event
 async def on_ready():
-    # ratings_cache = {id : get_skill(id) for id in db.keys()}
     print('Logged in as {0.user}'.format(client))
 
 @client.event
@@ -165,27 +181,26 @@ async def on_raw_reaction_remove(payload):
 async def on_voice_state_update(member, before, after):
     '''
     Clean up created voice channels if they're empty.
-    (could be less janky if we kept track of the created voice channels explicitly)
     '''
-    if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != 'csgo':
+    if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != 'valorant':
         return
     guild = before.channel.guild
     t_vc = ct_vc = None
     # find channels
     for vc in guild.voice_channels:
-        if vc.category == None or vc.category.name.lower() != 'csgo':
+        if vc.category == None or vc.category.name.lower() != 'valorant':
             continue
-        if vc.name.lower() == 't':
+        if vc.name.lower() == 'attackers':
             t_vc = vc
-        elif vc.name.lower() == 'ct':
+        elif vc.name.lower() == 'defenders':
             ct_vc = vc
-    # delete CSGO channels if they're empty
+    # delete VALORANT channels if they're empty
     if t_vc is not None and ct_vc is not None:
         if len(t_vc.members) == len(ct_vc.members) == 0:
             await t_vc.delete()
             await ct_vc.delete()
             for category in guild.categories:
-                if category.name.lower() == 'csgo':
+                if category.name.lower() == 'valorant':
                     await category.delete()
 
 @client.event
@@ -194,15 +209,15 @@ async def on_message(message):
     # ignore your own messages
     if message.author == client:
         return
-
+        
     if message.content.startswith('$help'):
         print(db_string(message.guild.id))
         output_string = "**Available Commands:**\n"
         output_string += "\t**$start** - start matchmaking process, bot sends message for players to react to\n"
         output_string += "\t\t**$unrated** - create random teams from reactions to $start message\n"
         output_string += "\t\t**$rated** - create teams based on MMR\n"
-        output_string += "\t\t\t**$t** - record a win for the T\n"
-        output_string += "\t\t\t**$ct** - record a win for the CT\n"
+        output_string += "\t\t\t**$attackers** - record a win for the Attackers\n"
+        output_string += "\t\t\t**$defenders** - record a win for the Defenders\n"
         output_string += "\t\t**$move** - move players to generated teams' voice channels\n"
         output_string += "\t\t**$back** - move all players into attacker voice channel\n"
         output_string += "\t**$rating** - get your current rating\n"
@@ -221,8 +236,9 @@ async def on_message(message):
         if message.guild.id not in guild_to_start_msg or guild_to_start_msg[message.guild.id] is None:
             await message.channel.send('use $start before $unrated')
         else:
+            start_time = time.time()
             # read reacts
-            guild_to_teams[message.guild.id] = {'t':[], 'ct':[]}
+            guild_to_teams[message.guild.id] = {'attackers':[], 'defenders':[]}
             start_msg = await message.channel.fetch_message(guild_to_start_msg[message.guild.id].id)
             players = set()
             for reaction in start_msg.reactions:
@@ -232,27 +248,29 @@ async def on_message(message):
             players = list(players)
             random.shuffle(players)
             team_size = len(players) // 2
-            t = players[:team_size]
-            ct = players[team_size:]
+            attackers = players[:team_size]
+            defenders = players[team_size:]
             # create output
-            output_string += "\T:\n"
-            for member in t:
+            output_string += "\Attackers:\n"
+            for member in attackers:
                 output_string += f'\t<@!{member}>'
-            output_string += "\n\CT:\n"
-            for member in ct:
+            output_string += "\n\Defenders:\n"
+            for member in defenders:
                 output_string += f'\t<@!{member}>'
             # store teams
-            guild_to_teams[message.guild.id]['t'] = t
-            guild_to_teams[message.guild.id]['ct'] = ct
+            guild_to_teams[message.guild.id]['attackers'] = attackers
+            guild_to_teams[message.guild.id]['defenders'] = defenders
             # send output
+            print(f'[{message.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
             await message.channel.send(output_string)
     
     if message.content.startswith('$rated'):
         if message.guild.id not in guild_to_start_msg or guild_to_start_msg[message.guild.id] is None:
             await message.channel.send('use *$start* before *$rated*')
         else:
+            start_time = time.time()
             # read reacts
-            guild_to_teams[message.guild.id] = {'t':[], 'ct':[]}
+            guild_to_teams[message.guild.id] = {'attackers':[], 'defenders':[]}
             start_msg = await message.channel.fetch_message(guild_to_start_msg[message.guild.id].id)
             players = set()
             for reaction in start_msg.reactions:
@@ -263,52 +281,60 @@ async def on_message(message):
                 await message.channel.send('must have **at least 2 players** for rated game')
                 return
             # create teams
-            t, ct, quality = make_teams(list(players), message.guild.id)
+            attackers, defenders, quality = make_teams(list(players), message.guild.id)
             # create output
             output_string = f'Predicted Quality: {round(quality*200, 2)}\n'
-            output_string += "\nT:\n"
-            for member in t:
+            output_string += "\nAttackers:\n"
+            for member in attackers:
                 output_string += f'\t<@!{member}>({round(get_skill(member, message.guild.id).mu, 2)}) '
-            output_string += "\n\nCT:\n"
-            for member in ct:
+            output_string += "\n\nDefenders:\n"
+            for member in defenders:
                 output_string += f'\t<@!{member}>({round(get_skill(member, message.guild.id).mu, 2)}) '
             # store teams
-            guild_to_teams[message.guild.id]['t'] = t
-            guild_to_teams[message.guild.id]['ct'] = ct
+            guild_to_teams[message.guild.id]['attackers'] = attackers
+            guild_to_teams[message.guild.id]['defenders'] = defenders
             # send output
+            print(f'[{message.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
             await message.channel.send(output_string)
     
-    if message.content.startswith('$t'):
+    if message.content.startswith('$attackers'):
+        if message.author.id not in ADMINS:
+            await message.channel.send('Permission Denied ❌. Blame Djaenk')
+            return
         if not guild_to_teams[message.guild.id]['t']:
             await message.channel.send('use *$make* or *$rated* before recording a result')
         else:
-            t, ct, t_new, ct_new = record_result(guild_to_teams[message.guild.id]['t'], guild_to_teams[message.guild.id]['ct'], message.guild.id)
-            output_string = '**Win for** ***T*** **recorded.**\n'
-            output_string += "\n**T:**\n"
-            for member in t:
-                output_string += f'\t<@!{member}> ({round(t[member].mu, 2)} -> {round(t_new[member].mu, 2)})\n'
-            output_string += "\n\n**CT:**\n"
-            for member in ct:
-                output_string += f'\t<@!{member}> ({round(ct[member].mu, 2)} -> {round(ct_new[member].mu, 2)})\n'
+            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[message.guild.id]['attackers'], guild_to_teams[message.guild.id]['defenders'], message.guild.id)
+            output_string = '**Win for** ***Attackers*** **recorded.**\n'
+            output_string += "\n**Attackers:**\n"
+            for member in attackers:
+                output_string += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
+            output_string += "\n\n**Defenders:**\n"
+            for member in defenders:
+                output_string += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
             # send output
             await message.channel.send(output_string)
     
-    if message.content.startswith('$ct'):
-        if not guild_to_teams[message.guild.id]['ct']:
+    if message.content.startswith('$defenders'):
+        if message.author.id not in ADMINS:
+            await message.channel.send('Permission Denied ❌. Blame Djaenk')
+            return
+        if not guild_to_teams[message.guild.id]['defenders']:
             await message.channel.send('use *$make* or *$rated* before recording a result')
         else:
-            ct, t, ct_new, t_new = record_result(guild_to_teams[message.guild.id]['ct'], guild_to_teams[message.guild.id]['t'], message.guild.id)
-            output_string = '**Win for** ***CT*** **recorded.**\n'
-            output_string += "\n**T:**\n"
-            for member in t:
-                output_string += f'\t<@!{member}> ({round(t[member].mu, 2)} -> {round(t_new[member].mu, 2)})\n'
-            output_string += "\n\n**CT:**\n"
-            for member in ct:
-                output_string += f'\t<@!{member}> ({round(ct[member].mu, 2)} -> {round(ct_new[member].mu, 2)})\n'
+            defenders, attackers, defenders_new, attackers_new = record_result(guild_to_teams[message.guild.id]['defenders'], guild_to_teams[message.guild.id]['attackers'], message.guild.id)
+            output_string = '**Win for** ***Defenders*** **recorded.**\n'
+            output_string += "\n**Attackers:**\n"
+            for member in attackers:
+                output_string += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
+            output_string += "\n\n**Defenders:**\n"
+            for member in defenders:
+                output_string += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
             # send output
             await message.channel.send(output_string)
 
     if message.content.startswith('$leaderboard'):
+        start_time = time.time()
         leaderboard = get_leaderboard(message.guild.id)
         if not leaderboard:
             await message.channel.send('No Ranked Players.')
@@ -325,6 +351,7 @@ async def on_message(message):
                 else:
                     output_string += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}\n'
                 last = item[1].mu, item[1].sigma, rank
+        print(f'[{message.guild.id}]: Leaderboard fetched in {round(time.time()-start_time, 4)}s')
         await message.channel.send(output_string)
     
     if message.content.startswith('$move'):
@@ -335,17 +362,17 @@ async def on_message(message):
         # find attacker and defender voice channels
         attacker_channel, defender_channel = None, None
         # check if Valorant channel category exists
-        csgo_category = None
+        valorant_category = None
         for category in guild.categories:
-            if category.name.lower() == 'csgo':
-                csgo_category = category
-        if csgo_category is None:
+            if category.name.lower() == 'valorant':
+                valorant_category = category
+        if valorant_category is None:
             # make it
-            csgo_category = await guild.create_category_channel('CSGO')
-            # await message.channel.send("CSGO category created.")
+            valorant_category = await guild.create_category_channel('VALORANT')
+            # await message.channel.send("VALORANT category created.")
         for vc in guild.voice_channels:
-            # ignore voice channels outside of CSGO
-            if vc.category != csgo_category:
+            # ignore voice channels outside of VALORANT
+            if vc.category != valorant_category:
                 continue
             if vc.name.lower() == 't':
                 attacker_channel = vc
@@ -353,19 +380,19 @@ async def on_message(message):
                 defender_channel = vc
         # create vc if necessary
         if attacker_channel is None:
-            attacker_channel = await guild.create_voice_channel('t', category=csgo_category)
+            attacker_channel = await guild.create_voice_channel('Attackers', category=valorant_category)
         if defender_channel is None:
-            defender_channel = await guild.create_voice_channel('ct', category=csgo_category)
+            defender_channel = await guild.create_voice_channel('Defenders', category=valorant_category)
         # move members to right channel
-        t = guild_to_teams[guild.id]['t']
-        ct = guild_to_teams[guild.id]['ct']
+        attackers = guild_to_teams[guild.id]['attackers']
+        defenders = guild_to_teams[guild.id]['defenders']
         count = 0
-        for attacker in t:
+        for attacker in attackers:
             member = guild.get_member(attacker)
             if member.voice is not None:
                 count += 1
                 await member.move_to(attacker_channel)
-        for defender in ct:
+        for defender in defenders:
             member = guild.get_member(defender)
             if member.voice is not None:
                 count += 1
@@ -373,15 +400,15 @@ async def on_message(message):
         await message.channel.send(f"{count} player{'s' if count > 1 else ''} moved.")
     
     if message.content.startswith('$back'):
-        # find CSGO voice channels
+        # find VALORANT voice channels
         guild = message.guild
         for vc in guild.voice_channels:
-            # ignore voice channels outside of CSGO
-            if vc.category is not None and vc.category.name.lower() != 'csgo':
+            # ignore voice channels outside of VALORANT
+            if vc.category is not None and vc.category.name.lower() != 'valorant':
                 continue
-            elif vc.name.lower() == 'ct':
+            elif vc.name.lower() == 'attackers':
                 for vc2 in guild.voice_channels:
-                    if vc2.name.lower() == 't':
+                    if vc2.name.lower() == 'defenders':
                         for defender in vc.members:
                             await defender.move_to(vc2)
                         await message.channel.send('✅')
@@ -396,26 +423,26 @@ async def on_message(message):
             skill = get_skill(authorid, message.guild.id)
             await message.channel.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
 
-    # remove csgo category and voice channels
+    # remove valorant category and voice channels
     if message.content.startswith('$clean'):
-        # find CSGO voice channels
+        # find VALORANT voice channels
         guild = message.guild
         for vc in guild.voice_channels:
-            # ignore voice channels outside of CSGO
-            if vc.category is not None and vc.category.name.lower() != 'csgo':
+            # ignore voice channels outside of VALORANT
+            if vc.category is not None and vc.category.name.lower() != 'valorant':
                 continue
-            if vc.name.lower() == 't':
+            if vc.name.lower() == 'attackers':
                 await vc.delete()
                 await message.channel.send('Attacker voice channel deleted.')
-            elif vc.name.lower() == 'ct':
+            elif vc.name.lower() == 'defenders':
                 await vc.delete()
                 await message.channel.send('Defender voice channel deleted.')
-        # delete CSGO category
+        # delete VALORANT category
         for category in guild.categories:
-            if category.name.lower() == 'csgo':
+            if category.name.lower() == 'valorant':
                 await category.delete()
-                await message.channel.send('CSGO category deleted.')
-        guild_to_teams[message.guild.id] = {'t':[], 'ct':[]}
+                await message.channel.send('VALORANT category deleted.')
+        guild_to_teams[message.guild.id] = {'attackers':[], 'defenders':[]}
         await message.channel.send('Players emptied.')
     
     # admin-only clearing of repl db
