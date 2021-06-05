@@ -4,6 +4,8 @@ import random
 import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option, create_choice
+
 
 from main import clear_db, db_string, get_skill, set_rating, record_result, make_teams, get_leaderboard
 
@@ -97,76 +99,121 @@ class Valorant(commands.Cog):
         start_msg = await ctx.send("React to this message if you're playing :)")
         guild_to_start_msg[ctx.guild.id] = start_msg
     
-    @cog_ext.cog_slash(name='unrated', guild_ids=GUILDS)
-    async def _unrated(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name='make', guild_ids=GUILDS, options=[
+        create_option(
+            name='type',
+            description='type of matchmaking',
+            option_type=3,
+            required=True,
+            choices=[
+                create_choice(
+                    name='unrated',
+                    value='unrated'
+                ),
+                create_choice(
+                    name='rated',
+                    value='rated'
+                )
+            ]
+
+        )
+    ])
+    async def _make(self, ctx: SlashContext, type: str, description='matchmake game from reacts to /start with option for MMR'):
+        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
+            await ctx.send('use */start* before */make*')
+        if type == 'unrated':
+            await self.unrated(ctx)
+        elif type == 'rated':
+            await self.rated(ctx)
+
+    async def unrated(self, ctx: SlashContext):
         # read reacts and make teams randomly without ranks
-        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
-            await ctx.send('use $start before $unrated')
-        else:
-            start_time = time.time()
-            # read reacts
-            guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
-            start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
-            players = set()
-            for reaction in start_msg.reactions:
-                users = await reaction.users().flatten()
-                players.update((user.id for user in users))
-            # create teams
-            players = list(players)
-            random.shuffle(players)
-            team_size = len(players) // 2
-            attackers = players[:team_size]
-            defenders = players[team_size:]
-            # create output
-            output = []
-            output += "\Attackers:\n"
-            for member in attackers:
-                output += f'\t<@!{member}>'
-            output += "\n\Defenders:\n"
-            for member in defenders:
-                output += f'\t<@!{member}>'
-            # store teams
-            guild_to_teams[ctx.guild.id]['attackers'] = attackers
-            guild_to_teams[ctx.guild.id]['defenders'] = defenders
-            # send output
-            print(f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
-            await ctx.send(''.join(output))
+        start_time = time.time()
+        # read reacts
+        guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
+        start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
+        players = set()
+        for reaction in start_msg.reactions:
+            users = await reaction.users().flatten()
+            players.update((user.id for user in users))
+        # create teams
+        players = list(players)
+        random.shuffle(players)
+        team_size = len(players) // 2
+        attackers = players[:team_size]
+        defenders = players[team_size:]
+        # create output
+        output = []
+        output += "\nAttackers:\n"
+        for member in attackers:
+            output += f'\t<@!{member}>'
+        output += "\n\nDefenders:\n"
+        for member in defenders:
+            output += f'\t<@!{member}>'
+        # store teams
+        guild_to_teams[ctx.guild.id]['attackers'] = attackers
+        guild_to_teams[ctx.guild.id]['defenders'] = defenders
+        # send output
+        print(f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
+        await ctx.send(''.join(output))
 
-    @cog_ext.cog_slash(name='rated', guild_ids=GUILDS)
-    async def _rated(self, ctx: SlashContext):
-        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
-            await ctx.send('use *$start* before *$rated*')
-        else:
-            start_time = time.time()
-            # read reacts
-            guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
-            start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
-            players = set()
-            for reaction in start_msg.reactions:
-                users = await reaction.users().flatten()
-                players.update((user.id for user in users))
-            # must have at least one member on each team
-            if len(players) < 2:
-                await ctx.send('must have **at least 2 players** for rated game')
-                return
-            # create teams
-            attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
-            # create output
-            output_string = f'Predicted Quality: {round(quality*200, 2)}\n'
-            output_string += "\nAttackers:\n"
-            for member in attackers:
-                output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
-            output_string += "\n\nDefenders:\n"
-            for member in defenders:
-                output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
-            # store teams
-            guild_to_teams[ctx.guild.id]['attackers'] = attackers
-            guild_to_teams[ctx.guild.id]['defenders'] = defenders
-            # send output
-            print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
-            await ctx.send(output_string)
+    async def rated(self, ctx: SlashContext):
+        start_time = time.time()
+        # read reacts
+        guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
+        start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
+        players = set()
+        for reaction in start_msg.reactions:
+            users = await reaction.users().flatten()
+            players.update((user.id for user in users))
+        # must have at least one member on each team
+        if len(players) < 2:
+            await ctx.send('must have **at least 2 players** for rated game')
+            return
+        # create teams
+        attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
+        # create output
+        output_string = f'Predicted Quality: {round(quality*200, 2)}\n'
+        output_string += "\nAttackers:\n"
+        for member in attackers:
+            output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
+        output_string += "\n\nDefenders:\n"
+        for member in defenders:
+            output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
+        # store teams
+        guild_to_teams[ctx.guild.id]['attackers'] = attackers
+        guild_to_teams[ctx.guild.id]['defenders'] = defenders
+        # send output
+        print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
+        await ctx.send(output_string)
 
-    @cog_ext.cog_slash(name='attackers', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='record', guild_ids=GUILDS, options=[
+        create_option(
+            name='winner',
+            description='which side won the game',
+            option_type=3,
+            required=True,
+            choices=[
+                create_choice(
+                    name='attackers',
+                    value='t'
+                ),
+                create_choice(
+                    name='defenders',
+                    value='ct'
+                )
+            ]
+
+        )
+    ])
+    async def _record(self, ctx: SlashContext, type: str, description='matchmake game from reacts to /start with option for MMR'):
+        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
+            await ctx.send('use */start* before */make*')
+        if type == 't':
+            await self._attackers(ctx)
+        elif type == 'ct':
+            await self._defenders(ctx)
+
     async def _attackers(self, ctx: SlashContext):
         if ctx.author.id not in ADMINS:
             await ctx.send('Permission Denied ❌. Blame Djaenk')
@@ -186,7 +233,6 @@ class Valorant(commands.Cog):
             # send output
             await ctx.send(''.join(output))
     
-    @cog_ext.cog_slash(name='defenders', guild_ids=GUILDS)
     async def _defenders(self, ctx: SlashContext):
         if ctx.author.id not in ADMINS:
             await ctx.send('Permission Denied ❌. Blame Djaenk')
@@ -289,12 +335,19 @@ class Valorant(commands.Cog):
                             await defender.move_to(vc2)
                         await ctx.send('✅')
 
-    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS)
-    async def _rating(self, ctx: SlashContext):
-        if ctx.message.raw_mentions:
-            for id in ctx.message.raw_mentions:
-                skill = get_skill(id, ctx.guild.id)
-                await ctx.send(f'\t<@!{id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n')
+
+    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of yourself or specified user', options=[
+        create_option(
+            name='user',
+            description='user to find rating for',
+            option_type=6,
+            required=False
+        )
+    ])
+    async def _rating(self, ctx: SlashContext, user):
+        if user:
+            skill = get_skill(user.id, ctx.guild.id)
+            await ctx.send(f'\t<@!{user.id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n')
         else:
             authorid = ctx.author.id
             skill = get_skill(authorid, ctx.guild.id)
