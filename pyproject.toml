@@ -2,7 +2,7 @@
 name = "repl_python3_CSMatchmaker"
 version = "0.1.0"
 description = ""
-authors = ["SeanChen10 <<>>"]
+authors = ["seanchencs <<>>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -10,6 +10,7 @@ replit = "^3.0.0"
 trueskill = "^0.4.5"
 discord = "^1.0.1"
 flask = "^1.1.2"
+discord-py-slash-command = "^1.2.2"
 
 [tool.poetry.dev-dependencies]
 
