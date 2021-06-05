@@ -2,11 +2,10 @@ import os
 import random
 import shelve
 import logging
-import time
 
 import discord
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext
+from discord_slash import SlashCommand
 
 import trueskill as ts
 
@@ -18,7 +17,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 # discord py client
-bot = commands.Bot(command_prefix='$', intents=discord.Intents.all())
+bot = commands.Bot(command_prefix='.', intents=discord.Intents.all())
 slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
 
 # TrueSkill Rating Settings
@@ -142,7 +141,7 @@ def get_leaderboard(guildid):
 
 @bot.event
 async def on_ready():
-    print (f"Signed in as {bot.user.name} #{bot.user.id}")
+    print('Logged in as {0.user}'.format(bot))
 
 bot.load_extension("valorant_cog")
 bot.run(os.getenv('TOKEN'))

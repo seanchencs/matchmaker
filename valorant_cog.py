@@ -1,16 +1,15 @@
 import time
 import random
 
-import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
 
-from main import clear_db, db_string, get_skill, set_rating, record_result, make_teams, get_leaderboard
+from main import get_skill, record_result, make_teams, get_leaderboard
 
 # global discord id lists
-GUILDS = [825900837083676732]
+GUILDS = [825900837083676732, 342839495328137216]
 ADMINS = [335828416412778496, 263745246821744640]
 
 # VALORANT MAPS
@@ -19,6 +18,7 @@ VALORANT_MAP_POOL = ['Bind', 'Haven', 'Split', 'Ascent', 'Icebox', 'Breeze']
 # dicts for guild-local variables
 guild_to_start_msg = {}
 guild_to_teams = {}
+guild_to_last_result_time = {}
 
 class Valorant(commands.Cog):
     def __init__(self, bot):
@@ -76,29 +76,13 @@ class Valorant(commands.Cog):
                     if category.name.lower() == 'valorant':
                         await category.delete()
 
-    # @cog_ext.cog_slash(name='help')
-    # async def help(self, ctx):
-    #     print(db_string(ctx.guild.id))
-    #     output = []
-    #     output += "**Available Commands:**\n"
-    #     output += "\t**$start** - start matchmaking process, bot sends message for players to react to\n"
-    #     output += "\t\t**$unrated** - create random teams from reactions to $start message\n"
-    #     output += "\t\t**$rated** - create teams based on MMR\n"
-    #     output += "\t\t\t**$attackers** - record a win for the Attackers\n"
-    #     output += "\t\t\t**$defenders** - record a win for the Defenders\n"
-    #     output += "\t\t**$move** - move players to generated teams' voice channels\n"
-    #     output += "\t\t**$back** - move all players into attacker voice channel\n"
-    #     output += "\t**$rating** - get your current rating\n"
-    #     output += "\t**$leaderboard** - get players sorted by rating\n"
-    #     output += "\t**$clean** - reset players and remove created voice channels\n"
-    #     output += "\t**$help** - list available commands"
-    #     await ctx.send(''.join(output))
     
     @cog_ext.cog_slash(name='start', guild_ids=GUILDS, description='start matchmaking process, bot sends message for players to react to')
     async def _start(self, ctx: SlashContext):
         start_msg = await ctx.send("React to this message if you're playing :)")
         guild_to_start_msg[ctx.guild.id] = start_msg
-    
+        
+
     @cog_ext.cog_slash(name='make', guild_ids=GUILDS, options=[
         create_option(
             name='type',
@@ -118,12 +102,12 @@ class Valorant(commands.Cog):
 
         )
     ])
-    async def _make(self, ctx: SlashContext, type: str, description='matchmake game from reacts to /start with option for MMR'):
+    async def _make(self, ctx: SlashContext, match_type: str, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
-        if type == 'unrated':
+        if match_type == 'unrated':
             await self.unrated(ctx)
-        elif type == 'rated':
+        elif match_type == 'rated':
             await self.rated(ctx)
 
     async def unrated(self, ctx: SlashContext):
@@ -187,7 +171,7 @@ class Valorant(commands.Cog):
         print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(output_string)
 
-    @cog_ext.cog_slash(name='record', guild_ids=GUILDS, options=[
+    @cog_ext.cog_slash(name='record', guild_ids=GUILDS, description='record match result and update player ratings', options=[
         create_option(
             name='winner',
             description='which side won the game',
@@ -207,17 +191,19 @@ class Valorant(commands.Cog):
         )
     ])
     async def _record(self, ctx: SlashContext, type: str, description='matchmake game from reacts to /start with option for MMR'):
+        if ctx.guild.id in guild_to_last_result_time and guild_to_last_result_time[ctx.guild.id] - time.time() < 60:
+            await ctx.send(f'Result already recorded. Wait {round(60 - (guild_to_last_result_time[ctx.guild.id] - time.time()))}s before recording another result.')
+            return
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
         if type == 't':
             await self._attackers(ctx)
         elif type == 'ct':
             await self._defenders(ctx)
+        
+        guild_to_last_result_time[ctx.guild.id] = time.time()
 
     async def _attackers(self, ctx: SlashContext):
-        if ctx.author.id not in ADMINS:
-            await ctx.send('Permission Denied ❌. Blame Djaenk')
-            return
         if not guild_to_teams[ctx.guild.id]['attackers']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
@@ -234,9 +220,6 @@ class Valorant(commands.Cog):
             await ctx.send(''.join(output))
     
     async def _defenders(self, ctx: SlashContext):
-        if ctx.author.id not in ADMINS:
-            await ctx.send('Permission Denied ❌. Blame Djaenk')
-            return
         if not guild_to_teams[ctx.guild.id]['defenders']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
@@ -252,7 +235,7 @@ class Valorant(commands.Cog):
             # send output
             await ctx.send(''.join(output))
     
-    @cog_ext.cog_slash(name='leaderboard', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='leaderboard', description='get list of players on server sorted by rating', guild_ids=GUILDS)
     async def _leaderboard(self, ctx: SlashContext):
         start_time = time.time()
         leaderboard = get_leaderboard(ctx.guild.id)
@@ -274,7 +257,7 @@ class Valorant(commands.Cog):
         print(f'[{ctx.guild.id}]: Leaderboard fetched in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
 
-    @cog_ext.cog_slash(name='move', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
     async def _move(self, ctx: SlashContext):
         if ctx.guild.id not in guild_to_teams:
             await ctx.send("Use $start to begin matchmaking.")
@@ -320,7 +303,7 @@ class Valorant(commands.Cog):
                 await member.move_to(defender_channel)
         await ctx.send(f"{count} player{'s' if count > 1 else ''} moved.")
 
-    @cog_ext.cog_slash(name='back', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='back', description='move all players to same voice channel', guild_ids=GUILDS)
     async def _back(self, ctx: SlashContext):
         # find VALORANT voice channels
         guild = ctx.guild
@@ -336,12 +319,12 @@ class Valorant(commands.Cog):
                         await ctx.send('✅')
 
 
-    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of yourself or specified user', options=[
+    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified user', options=[
         create_option(
             name='user',
             description='user to find rating for',
             option_type=6,
-            required=False
+            required=True
         )
     ])
     async def _rating(self, ctx: SlashContext, user):
@@ -353,7 +336,7 @@ class Valorant(commands.Cog):
             skill = get_skill(authorid, ctx.guild.id)
             await ctx.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
 
-    @cog_ext.cog_slash(name='clean', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
     async def _clean(self, ctx: SlashContext):
         # find VALORANT voice channels
         guild = ctx.guild
