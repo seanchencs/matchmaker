@@ -105,6 +105,8 @@ class Valorant(commands.Cog):
     async def _make(self, ctx: SlashContext, match_type: str, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
+        if ctx.guild.id in guild_to_last_result_time:
+            del guild_to_last_result_time[ctx.guild_id]
         if match_type == 'unrated':
             await self.unrated(ctx)
         elif match_type == 'rated':

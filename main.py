@@ -97,7 +97,6 @@ def record_result(winning_team, losing_team, winning_score, losing_score, guildi
     winning_team_ratings = {id : get_skill(id, guildid) for id in winning_team}
     losing_team_ratings = {id : get_skill(id, guildid) for id in losing_team}
     winning_team_ratings_new, losing_team_ratings_new = rate_with_round_score(winning_team_ratings, losing_team_ratings, winning_score, losing_score)
-    #winning_team_ratings_new, losing_team_ratings_new = ts.rate([winning_team_ratings, losing_team_ratings], [0,1])
     with shelve.open(str(guildid), writeback=True) as db:
         ratings = db['ratings']
         for id in winning_team_ratings:
