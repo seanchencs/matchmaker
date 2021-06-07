@@ -207,7 +207,10 @@ class Valorant(commands.Cog):
             await ctx.send(f'Result already recorded. Wait {round(60 - (guild_to_last_result_time[ctx.guild.id] - time.time()))}s before recording another result.')
             return
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
-            await ctx.send('use */start* before */make*')
+            await ctx.send('use */start* and */make* before */record*')
+            return
+        if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]['attackers']:
+            await ctx.send('use */make* before */record*')
             return
         if winning_score < losing_score:
             await ctx.send('ERROR: Winning team cannot have won less rounds than losing team.')
