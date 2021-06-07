@@ -387,16 +387,17 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             match = db['history'][-1]
+            print('about to reset ratings')
             for player in match['attackers']:
                 set_rating(player, match['old_ratings'][player], ctx.guild.id)
             for player in match['defenders']:
                 set_rating(player, match['old_ratings'][player], ctx.guild.id)
-
             # delete from match history
-            del match
+            del db['history'][-1]
         # reset the record cooldown
         if ctx.guild.id in guild_to_last_result_time:
             del guild_to_last_result_time[ctx.guild.id]
+        await ctx.send('Undo successful.')
 
     @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS)
     async def _history(self, ctx: SlashContext):
