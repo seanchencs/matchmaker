@@ -385,10 +385,10 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
             history = db['history'][-10:]
             for match in history:
-                output.append(f"{history['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(id).name for id in history['attackers']]))
-                output.append(f"{ history['attacker_score']} - {history['defender_score']} ")
-                output.append(','.join([ctx.guild.get_member(id).name for id in history['defenders']]))
+                output.append(f"{match['time'].strftime(time_format)}: ")
+                output.append(', '.join([ctx.guild.get_member(id).name for id in match['attackers']]))
+                output.append(f"{ match['attacker_score']} - {match['defender_score']} ")
+                output.append(','.join([ctx.guild.get_member(id).name for id in match['defenders']]))
                 output.append('\n')
         await ctx.send(''.join(output))
 
