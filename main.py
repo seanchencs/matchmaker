@@ -79,13 +79,14 @@ def set_rating(userid, rating, guildid):
     guildid = str(guildid)
     # write to cache
     if guildid not in ratings_cache:
-            ratings_cache[guildid] = {}
+        ratings_cache[guildid] = {}
     ratings_cache[guildid][userid] = rating
     # write to shelve persistent db
     with shelve.open(str(guildid), writeback=True) as db:
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
+    print(ratings_cache[guildid][userid], db['ratings'][userid] = rating.mu, rating.sigma)
 
 def record_result(winning_team, losing_team, winning_score, losing_score, guildid):
     '''
