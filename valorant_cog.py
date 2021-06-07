@@ -383,7 +383,7 @@ class Valorant(commands.Cog):
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db:
                 await ctx.send('No recorded matches.')
-            history = db['history'][-10:]
+            history = db['history'][-10:].reverse()
             for match in history:
                 output.append(f"`{match['time'].strftime(time_format)}: ")
                 output.append(', '.join([ctx.guild.get_member(id).name for id in match['attackers']]))
