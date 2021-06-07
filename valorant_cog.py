@@ -242,7 +242,7 @@ class Valorant(commands.Cog):
                 if 'history' not in db:
                     db['history'] = []
                 history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now(), 'old_ratings': {**attackers, **defenders})
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now(), 'old_ratings': {**attackers, **defenders}})
             
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
