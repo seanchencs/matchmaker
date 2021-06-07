@@ -190,13 +190,13 @@ class Valorant(commands.Cog):
 
         ),
         create_option(
-            name='winner score',
+            name='winner_score',
             description='# of rounds won by winning team',
             option_type=4,
             required=True,
         ),
         create_option(
-            name='loser score',
+            name='loser_score',
             description='# of rounds won by losing team',
             option_type=4,
             required=True,
