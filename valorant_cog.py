@@ -165,7 +165,7 @@ class Valorant(commands.Cog):
         # create teams
         attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
         # create output
-        output_string = f'Predicted Quality: {round(quality*200, 2)}\n'
+        output_string = f'Predicted Quality: {round(quality*10, 2)}\n'
         output_string += "\nAttackers:\n"
         for member in attackers:
             output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
