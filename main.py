@@ -9,6 +9,8 @@ from discord_slash import SlashCommand
 
 import trueskill as ts
 
+from CustomTrueSkill import rate_with_round_score
+
 # set up logging
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -85,7 +87,7 @@ def set_rating(userid, rating, guildid):
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
 
-def record_result(winning_team, losing_team, guildid):
+def record_result(winning_team, losing_team, winning_score, losing_score, guildid):
     '''
     Updates the TrueSkill ratings given a result.
     :param winning_team: list of userids of players on the winning team
@@ -94,7 +96,8 @@ def record_result(winning_team, losing_team, guildid):
     '''
     winning_team_ratings = {id : get_skill(id, guildid) for id in winning_team}
     losing_team_ratings = {id : get_skill(id, guildid) for id in losing_team}
-    winning_team_ratings_new, losing_team_ratings_new = ts.rate([winning_team_ratings, losing_team_ratings], [0,1])
+    winning_team_ratings_new, losing_team_ratings_new = rate_with_round_score(winning_team_ratings, losing_team_ratings, winning_score, losing_score)
+    #winning_team_ratings_new, losing_team_ratings_new = ts.rate([winning_team_ratings, losing_team_ratings], [0,1])
     with shelve.open(str(guildid), writeback=True) as db:
         ratings = db['ratings']
         for id in winning_team_ratings:
