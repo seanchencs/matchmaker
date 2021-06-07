@@ -402,7 +402,7 @@ class Valorant(commands.Cog):
             )
         ]
     )
-    async def _history(self, userid, ctx: SlashContext):
+    async def _history(self, userid=None, ctx: SlashContext):
         output = []
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db or not db['history']:
