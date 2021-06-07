@@ -1,4 +1,3 @@
-from typing import Iterable
 import trueskill as ts
 
 def rate_with_round_score(winners, losers, winner_score:int, loser_score:int, factor=1):
