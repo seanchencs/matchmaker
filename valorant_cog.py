@@ -402,8 +402,9 @@ class Valorant(commands.Cog):
             )
         ]
     )
-    async def _history(self, ctx: SlashContext, userid=None):
+    async def _history(self, ctx: SlashContext, user=None):
         output = []
+        userid = user.id
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
