@@ -413,7 +413,9 @@ class Valorant(commands.Cog):
                 userid = str(user.id)
                 history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
                 history.reverse()
-                print(len(history))
+                if not history:
+                    await ctx.send('No recorded matches.')
+                    return
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
