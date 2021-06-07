@@ -404,12 +404,13 @@ class Valorant(commands.Cog):
     )
     async def _history(self, ctx: SlashContext, user=None):
         output = []
-        userid = user.id
+        
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
                 return
-            if userid:
+            if user:
+                userid = user.id
                 history = list(filter(lambda x: int(userid) in x['attackers'] or int(userid) in x['defenders'], db['history']))
                 history.reverse()
                 print(len(history))
