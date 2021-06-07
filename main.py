@@ -86,7 +86,7 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
-    print(ratings_cache[guildid][userid], db['ratings'][userid] = rating.mu, rating.sigma)
+    print(ratings_cache[guildid][userid], db['ratings'][userid])
 
 def record_result(winning_team, losing_team, winning_score, losing_score, guildid):
     '''
