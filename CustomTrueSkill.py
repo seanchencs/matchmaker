@@ -1,6 +1,6 @@
 import trueskill as ts
 
-def rate_with_round_score(winners, losers, winner_score:int, loser_score:int, factor=1):
+def rate_with_round_score(winners, losers, winner_score:int, loser_score:int, factor=0.75):
     score_diff = winner_score - loser_score
     weight_change = 1 + (score_diff/(winner_score)-0.5)*factor
     print(weight_change)

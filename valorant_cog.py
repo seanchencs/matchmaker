@@ -1,5 +1,6 @@
 import time
 import random
+import shelve
 
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
@@ -221,7 +222,6 @@ class Valorant(commands.Cog):
             await self._attackers(winning_score, losing_score, ctx)
         elif winner == 'defenders':
             await self._defenders(winning_score, losing_score, ctx)
-        
         guild_to_last_result_time[ctx.guild.id] = time.time()
 
     async def _attackers(self, winning_score, losing_score, ctx: SlashContext):
@@ -229,6 +229,13 @@ class Valorant(commands.Cog):
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
             attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], winning_score, losing_score, ctx.guild.id)
+            
+            with shelve.open(str(ctx.guild.id), writeback=True) as db:
+                if 'history' not in db:
+                    db['history'] = []
+                history = db['history']
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score})
+            
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
             output += "\n**Attackers:**\n"
@@ -245,6 +252,13 @@ class Valorant(commands.Cog):
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
             defenders, attackers, defenders_new, attackers_new = record_result(guild_to_teams[ctx.guild.id]['defenders'], guild_to_teams[ctx.guild.id]['attackers'], winning_score, losing_score, ctx.guild.id)
+            
+            with shelve.open(str(ctx.guild.id), writeback=True) as db:
+                if 'history' not in db:
+                    db['history'] = []
+                history = db['history']
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score})
+            
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
             output += "\n**Attackers:**\n"
