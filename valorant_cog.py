@@ -292,7 +292,7 @@ class Valorant(commands.Cog):
                 if (item[1].mu, item[1].sigma) == last[:2]:
                     output += f'**{last[2]}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
                 else:
-                    output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2) ({w}W {l}L)}\n'
+                    output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
                 last = item[1].mu, item[1].sigma, rank
         print(f'[{ctx.guild.id}]: Leaderboard fetched in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
