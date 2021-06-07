@@ -393,21 +393,39 @@ class Valorant(commands.Cog):
             del guild_to_last_result_time[ctx.guild.id]
         await ctx.send('Undo successful.')
 
-    @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS)
-    async def _history(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS, options=[
+        create_option(
+            name='user',
+            description='user to find history for',
+            option_type=6,
+            required=False
+            )
+        ]
+    )
+    async def _history(self, userid, ctx: SlashContext):
         output = []
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
                 return
-            history = db['history'][-10:]
-            history.reverse()
-            for match in history:
-                output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(int(id)).name for id in match['attackers']]))
-                output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                output.append(','.join([ctx.guild.get_member(int(id)).name for id in match['defenders']]))
-                output.append('`\n')
+            if userid:
+                history = filter(lambda x: userid in x['attackers'] or userid in x['defenders'], db['history'])
+                history.reverse()
+                for match in history:
+                    output.append(f"`{match['time'].strftime(time_format)}: ")
+                    output.append(', '.join([(ctx.guild.get_member(int(uid)).name if (int(uid) != int(userid)) else f"__{ctx.guild.get_member(int(uid)).name}__") for uid in match['attackers']]))
+                    output.append(f" { match['attacker_score']} - {match['defender_score']} ")
+                    output.append(','.join([(ctx.guild.get_member(int(uid)).name if (int(uid) != int(userid)) else f"__{ctx.guild.get_member(int(uid)).name}__") for uid in match['defenders']]))
+                    output.append(f"` {round(match['old_ratings'][userid], 2)} -> {round(match['attackers'][userid].mu if (userid in match['attackers']) else match['defenders'][userid].mu, 2)}\n")
+            else:
+                history = db['history'][-10:]
+                history.reverse()
+                for match in history:
+                    output.append(f"`{match['time'].strftime(time_format)}: ")
+                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
+                    output.append(f" { match['attacker_score']} - {match['defender_score']} ")
+                    output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                    output.append('`\n')
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
