@@ -110,6 +110,7 @@ class Valorant(commands.Cog):
     async def _make(self, ctx: SlashContext, match_type: str, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
+            return
         if ctx.guild.id in guild_to_last_result_time:
             del guild_to_last_result_time[ctx.guild_id]
         if match_type == 'unrated':
@@ -300,7 +301,7 @@ class Valorant(commands.Cog):
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
     async def _move(self, ctx: SlashContext):
         if ctx.guild.id not in guild_to_teams:
-            await ctx.send("Use $start to begin matchmaking.")
+            await ctx.send("Use /start to begin matchmaking.")
             return
         guild = ctx.guild
         # find attacker and defender voice channels
