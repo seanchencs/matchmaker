@@ -395,7 +395,8 @@ class Valorant(commands.Cog):
             # delete from match history
             del match
         # reset the record cooldown
-        del guild_to_last_result_time[ctx.guild.id]
+        if ctx.guild.id in guild_to_last_result_time:
+            del guild_to_last_result_time[ctx.guild.id]
 
     @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS)
     async def _history(self, ctx: SlashContext):
