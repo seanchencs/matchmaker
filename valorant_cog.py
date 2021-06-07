@@ -389,9 +389,9 @@ class Valorant(commands.Cog):
             match = db['history'][-1]
             print('about to reset ratings')
             for player in match['attackers']:
-                set_rating(player, match['old_ratings'][player], ctx.guild.id)
+                set_rating(str(player), match['old_ratings'][player], ctx.guild.id)
             for player in match['defenders']:
-                set_rating(player, match['old_ratings'][player], ctx.guild.id)
+                set_rating(str(player), match['old_ratings'][player], ctx.guild.id)
             # delete from match history
             del db['history'][-1]
         # reset the record cooldown
@@ -410,9 +410,9 @@ class Valorant(commands.Cog):
             history.reverse()
             for match in history:
                 output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(id).name for id in match['attackers']]))
+                output.append(', '.join([ctx.guild.get_member(int(id)).name for id in match['attackers']]))
                 output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                output.append(','.join([ctx.guild.get_member(id).name for id in match['defenders']]))
+                output.append(','.join([ctx.guild.get_member(int(id)).name for id in match['defenders']]))
                 output.append('`\n')
         await ctx.send(''.join(output))
 

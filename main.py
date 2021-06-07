@@ -86,7 +86,7 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
-    print(ratings_cache[guildid][userid], db['ratings'][userid])
+        print(ratings_cache[guildid][userid], db['ratings'][userid])
 
 def record_result(winning_team, losing_team, winning_score, losing_score, guildid):
     '''
@@ -95,17 +95,17 @@ def record_result(winning_team, losing_team, winning_score, losing_score, guildi
     :param losing_team: list of userids of players on the losing team
     :return: old winning team ratings, old losing team ratings, new winning team ratings, new losing team ratings
     '''
-    winning_team_ratings = {id : get_skill(id, guildid) for id in winning_team}
-    losing_team_ratings = {id : get_skill(id, guildid) for id in losing_team}
+    winning_team_ratings = {str(id) : get_skill(str(id), guildid) for id in winning_team}
+    losing_team_ratings = {str(id) : get_skill(str(id), guildid) for id in losing_team}
     winning_team_ratings_new, losing_team_ratings_new = rate_with_round_score(winning_team_ratings, losing_team_ratings, winning_score, losing_score)
     with shelve.open(str(guildid), writeback=True) as db:
         ratings = db['ratings']
         for id in winning_team_ratings:
-            ratings_cache[str(guildid)][str(id)] = winning_team_ratings_new[id]
-            ratings[str(id)] = winning_team_ratings_new[id].mu, winning_team_ratings_new[id].sigma
+            ratings_cache[str(guildid)][str(id)] = winning_team_ratings_new[str(id)]
+            ratings[str(id)] = winning_team_ratings_new[id].mu, winning_team_ratings_new[str(id)].sigma
         for id in losing_team_ratings:
-            ratings_cache[str(guildid)][str(id)] = losing_team_ratings_new[id]
-            ratings[str(id)] = losing_team_ratings_new[id].mu, losing_team_ratings_new[id].sigma
+            ratings_cache[str(guildid)][str(id)] = losing_team_ratings_new[str(id)]
+            ratings[str(id)] = losing_team_ratings_new[id].mu, losing_team_ratings_new[str(id)].sigma
         return winning_team_ratings, losing_team_ratings, winning_team_ratings_new, losing_team_ratings_new
 
 def make_teams(players, guildid, pool=10):
@@ -115,14 +115,14 @@ def make_teams(players, guildid, pool=10):
     :param pool: number of matches to generate from which the best is chosen
     :return: t (list of userids), ct (list of userids), predicted quality of match
     '''
-    player_ratings = {id : get_skill(id, guildid) for id in players}
+    player_ratings = {str(id) : get_skill(str(id), guildid) for id in players}
     t = ct = []
     best_quality = 0.0
     for i in range(pool):
         random.shuffle(players)
         team_size = len(players) // 2
-        t1 = {id : player_ratings[id] for id in players[:team_size]}
-        t2 = {id : player_ratings[id] for id in players[team_size:]}
+        t1 = {str(id) : player_ratings[str(id)] for id in players[:team_size]}
+        t2 = {str(id) : player_ratings[str(id)] for id in players[team_size:]}
         quality = ts.quality([t1, t2])
         if quality > best_quality:
             t = list(t1.keys())
@@ -137,8 +137,8 @@ def get_leaderboard(guildid):
     '''
     with shelve.open(str(guildid), writeback=True) as db:
         if 'ratings' in db:
-            ratings = {id : ts.TrueSkill(db['ratings'][id][0], db['ratings'][id][1]) for id in db['ratings']}
-            #ratings = {id : get_skill(id, guildid) for id in db['ratings'].keys()}
+            # ratings = {id : ts.TrueSkill(db['ratings'][id][0], db['ratings'][id][1]) for id in db['ratings']}
+            ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
         return None
 
