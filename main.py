@@ -130,12 +130,30 @@ def make_teams(players, guildid, pool=10):
             best_quality = quality
     return t, ct, best_quality
 
+def get_win_loss(userid, guildid):
+    userid = str(userid)
+    wins, losses = 0, 0
+    with shelve.open(str(guildid)) as db:
+        if 'history' in db:
+            for match in db['history']:
+                if userid in match['attackers']:
+                    if match['attacker_score'] > match['defender_score']:
+                        wins += 1
+                    else:
+                        losses += 1
+                elif userid in match['defenders']:
+                    if match['defender_score'] > match['attacker_score']:
+                        wins += 1
+                    else:
+                        losses += 1
+    return wins, losses
+
 def get_leaderboard(guildid):
     '''
     Gets list of userids and TrueSkill ratings, sorted by current rating
     :return: list of (userid, TrueSkill.Rating) tuples, sorted by rating
     '''
-    with shelve.open(str(guildid), writeback=True) as db:
+    with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             # ratings = {id : ts.TrueSkill(db['ratings'][id][0], db['ratings'][id][1]) for id in db['ratings']}
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}

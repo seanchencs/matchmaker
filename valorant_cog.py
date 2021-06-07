@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
-from main import set_rating, get_skill, record_result, make_teams, get_leaderboard
+from main import get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
 
 # local time zone
 central = timezone('US/Central')
@@ -287,11 +287,12 @@ class Valorant(commands.Cog):
         for item in leaderboard:
             member = ctx.guild.get_member(int(item[0]))
             if member:
+                w, l = get_win_loss(item[0], ctx.guild.id)
                 rank += 1
                 if (item[1].mu, item[1].sigma) == last[:2]:
-                    output += f'**{last[2]}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}\n'
+                    output += f'**{last[2]}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
                 else:
-                    output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}\n'
+                    output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2) ({w}W {l}L)}\n'
                 last = item[1].mu, item[1].sigma, rank
         print(f'[{ctx.guild.id}]: Leaderboard fetched in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
