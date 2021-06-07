@@ -410,8 +410,8 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             if user:
-                userid = user.id
-                history = list(filter(lambda x: str(userid) in x['attackers'] or str(userid) in x['defenders'], db['history']))
+                userid = str(user.id)
+                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
                 history.reverse()
                 print(len(history))
                 for match in history:
@@ -419,7 +419,7 @@ class Valorant(commands.Cog):
                     output.append(', '.join([(ctx.guild.get_member(int(uid)).name if (int(uid) != int(userid)) else f"__{ctx.guild.get_member(int(uid)).name}__") for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([(ctx.guild.get_member(int(uid)).name if (int(uid) != int(userid)) else f"__{ctx.guild.get_member(int(uid)).name}__") for uid in match['defenders']]))
-                    if (userid in match['attackers']):
+                    if userid in match['attackers']:
                         output.append(f"` {round(match['old_ratings'][userid], 2)} -> {round(match['attackers'][userid].mu, 2)}\n")
                     else:
                         output.append(f"` {round(match['old_ratings'][userid], 2)} -> {round(match['defenders'][userid].mu, 2)}\n")
