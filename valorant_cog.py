@@ -83,12 +83,10 @@ class Valorant(commands.Cog):
                     if category.name.lower() == 'valorant':
                         await category.delete()
 
-    
     @cog_ext.cog_slash(name='start', guild_ids=GUILDS, description='start matchmaking process, bot sends message for players to react to')
     async def _start(self, ctx: SlashContext):
         start_msg = await ctx.send("React to this message if you're playing :)")
         guild_to_start_msg[ctx.guild.id] = start_msg
-        
 
     @cog_ext.cog_slash(name='make', guild_ids=GUILDS, options=[
         create_option(
