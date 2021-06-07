@@ -388,9 +388,9 @@ class Valorant(commands.Cog):
                 return
             match = db['history'][-1]
             for player in match['attackers']:
-                set_rating(player, match['old_ratings']['player'], ctx.guild.id)
+                set_rating(player, match['old_ratings'][player], ctx.guild.id)
             for player in match['defenders']:
-                set_rating(player, match['old_ratings']['player'], ctx.guild.id)
+                set_rating(player, match['old_ratings'][player], ctx.guild.id)
 
             # delete from match history
             del match
