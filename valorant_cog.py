@@ -369,13 +369,9 @@ class Valorant(commands.Cog):
         )
     ])
     async def _rating(self, ctx: SlashContext, user):
-        if user:
-            skill = get_skill(user.id, ctx.guild.id)
-            await ctx.send(f'\t<@!{user.id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n')
-        else:
-            authorid = ctx.author.id
-            skill = get_skill(authorid, ctx.guild.id)
-            await ctx.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
+        skill = get_skill(user.id, ctx.guild.id)
+        w, l = get_win_loss(user.id, ctx.guild.id)
+        await ctx.send(f'\t<@!{user.id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}  ({w}W {l}L)\n')
 
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
     async def _undo(self, ctx: SlashContext):
