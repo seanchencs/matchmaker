@@ -1,4 +1,3 @@
-from os import write
 import time
 from datetime import datetime
 from pytz import timezone
@@ -8,8 +7,6 @@ import shelve
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
-
-import trueskill as ts
 
 from main import set_rating, get_skill, record_result, make_teams, get_leaderboard
 
@@ -31,6 +28,7 @@ guild_to_last_result_time = {}
 
 class Valorant(commands.Cog):
     def __init__(self, bot):
+        '''VALORANT commands for matchmaking Discord bot'''
         self.bot = bot
 
     @commands.Cog.listener()
