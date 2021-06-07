@@ -1,4 +1,6 @@
 import time
+from datetime import datetime
+from pytz import timezone
 import random
 import shelve
 
@@ -8,6 +10,10 @@ from discord_slash.utils.manage_commands import create_option, create_choice
 
 
 from main import get_skill, record_result, make_teams, get_leaderboard
+
+# local time zone
+central = timezone('US/Central')
+time_format = '%Y-%m-%d %H:%M:%S'
 
 # global discord id lists
 GUILDS = [825900837083676732]
@@ -234,7 +240,7 @@ class Valorant(commands.Cog):
                 if 'history' not in db:
                     db['history'] = []
                 history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score})
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now()})
             
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
@@ -257,7 +263,7 @@ class Valorant(commands.Cog):
                 if 'history' not in db:
                     db['history'] = []
                 history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score})
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score, 'time': datetime.now()})
             
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
@@ -370,6 +376,21 @@ class Valorant(commands.Cog):
             authorid = ctx.author.id
             skill = get_skill(authorid, ctx.guild.id)
             await ctx.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
+
+    @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS)
+    async def _history(self, ctx: SlashContext):
+        output = []
+        with shelve.open(str(ctx.guild.id)) as db:
+            if 'history' not in db:
+                await ctx.send('No recorded matches.')
+            history = db['history'][-10:]
+            for match in history:
+                output.append(f"{history['time'].strftime(time_format)}: ")
+                output.append(', '.join([ctx.guild.get_member(id).name for id in history['attackers']]))
+                output.append(f"{ history['attacker_score']} - {history['defender_score']} ")
+                output.append(','.join([ctx.guild.get_member(id).name for id in history['defenders']]))
+                output.append('\n')
+        await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
     async def _clean(self, ctx: SlashContext):
