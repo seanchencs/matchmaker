@@ -409,7 +409,7 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             if userid:
-                history = list(filter(lambda x: userid in x['attackers'] or userid in x['defenders'], db['history']))
+                history = list(filter(lambda x: str(userid) in x['attackers'] or str(userid) in x['defenders'], db['history']))
                 history.reverse()
                 print(len(history))
                 for match in history:
