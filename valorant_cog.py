@@ -180,34 +180,50 @@ class Valorant(commands.Cog):
             choices=[
                 create_choice(
                     name='attackers',
-                    value='t'
+                    value='attackers'
                 ),
                 create_choice(
                     name='defenders',
-                    value='ct'
+                    value='defenders'
                 )
             ]
 
-        )
+        ),
+        create_option(
+            name='winner score',
+            description='# of rounds won by winning team',
+            option_type=4,
+            required=True,
+        ),
+        create_option(
+            name='loser score',
+            description='# of rounds won by losing team',
+            option_type=4,
+            required=True,
+        ),
     ])
-    async def _record(self, ctx: SlashContext, type: str, description='matchmake game from reacts to /start with option for MMR'):
+    async def _record(self, ctx: SlashContext, winner:str, winning_score:int, losing_score:int, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id in guild_to_last_result_time and guild_to_last_result_time[ctx.guild.id] - time.time() < 60:
             await ctx.send(f'Result already recorded. Wait {round(60 - (guild_to_last_result_time[ctx.guild.id] - time.time()))}s before recording another result.')
             return
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
-        if type == 't':
+            return
+        if winning_score < losing_score:
+            await ctx.send('ERROR: Winning team cannot have won less rounds than losing team.')
+            return
+        if winner == 'attackers':
             await self._attackers(ctx)
-        elif type == 'ct':
+        elif winner == 'defenders':
             await self._defenders(ctx)
         
         guild_to_last_result_time[ctx.guild.id] = time.time()
 
-    async def _attackers(self, ctx: SlashContext):
+    async def _attackers(self, winning_score, losing_score, ctx: SlashContext):
         if not guild_to_teams[ctx.guild.id]['attackers']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], ctx.guild.id)
+            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], winning_score, losing_score, ctx.guild.id)
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
             output += "\n**Attackers:**\n"
@@ -219,11 +235,11 @@ class Valorant(commands.Cog):
             # send output
             await ctx.send(''.join(output))
     
-    async def _defenders(self, ctx: SlashContext):
+    async def _defenders(self, winning_score, losing_score, ctx: SlashContext):
         if not guild_to_teams[ctx.guild.id]['defenders']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            defenders, attackers, defenders_new, attackers_new = record_result(guild_to_teams[ctx.guild.id]['defenders'], guild_to_teams[ctx.guild.id]['attackers'], ctx.guild.id)
+            defenders, attackers, defenders_new, attackers_new = record_result(guild_to_teams[ctx.guild.id]['defenders'], guild_to_teams[ctx.guild.id]['attackers'], winning_score, losing_score, ctx.guild.id)
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
             output += "\n**Attackers:**\n"
