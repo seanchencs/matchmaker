@@ -238,10 +238,10 @@ class Valorant(commands.Cog):
             
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
-            output += "\n**Attackers:**\n"
+            output += f"\n**Attackers - {winning_score}:**\n"
             for member in attackers:
                 output += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
-            output += "\n\n**Defenders:**\n"
+            output += f"\n\n**Defenders - {losing_score}:**\n"
             for member in defenders:
                 output += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
             # send output
@@ -261,10 +261,10 @@ class Valorant(commands.Cog):
             
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
-            output += "\n**Attackers:**\n"
+            output += f"\n**Attackers - {losing_score}:**\n"
             for member in attackers:
                 output += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
-            output += "\n\n**Defenders:**\n"
+            output += f"\n\n**Defenders - {winning_score}:**\n"
             for member in defenders:
                 output += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
             # send output
