@@ -203,8 +203,8 @@ class Valorant(commands.Cog):
         ),
     ])
     async def _record(self, ctx: SlashContext, winner:str, winning_score:int, losing_score:int, description='matchmake game from reacts to /start with option for MMR'):
-        if ctx.guild.id in guild_to_last_result_time and guild_to_last_result_time[ctx.guild.id] - time.time() < 60:
-            await ctx.send(f'Result already recorded. Wait {round(60 - (guild_to_last_result_time[ctx.guild.id] - time.time()))}s before recording another result.')
+        if ctx.guild.id in guild_to_last_result_time and time.time() - guild_to_last_result_time[ctx.guild.id] < 60:
+            await ctx.send(f'Result already recorded. Wait {round(60 - (time.time() - guild_to_last_result_time[ctx.guild.id]))}s before recording another result.')
             return
         if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* and */make* before */record*')
