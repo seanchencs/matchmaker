@@ -411,7 +411,7 @@ class Valorant(commands.Cog):
                 return
             if user:
                 userid = user.id
-                history = list(filter(lambda x: int(userid) in x['attackers'] or int(userid) in x['defenders'], db['history']))
+                history = list(filter(lambda x: str(userid) in x['attackers'] or str(userid) in x['defenders'], db['history']))
                 history.reverse()
                 print(len(history))
                 for match in history:
