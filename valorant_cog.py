@@ -213,9 +213,9 @@ class Valorant(commands.Cog):
             await ctx.send('ERROR: Winning team cannot have won less rounds than losing team.')
             return
         if winner == 'attackers':
-            await self._attackers(ctx)
+            await self._attackers(winning_score, losing_score, ctx)
         elif winner == 'defenders':
-            await self._defenders(ctx)
+            await self._defenders(winning_score, losing_score, ctx)
         
         guild_to_last_result_time[ctx.guild.id] = time.time()
 
