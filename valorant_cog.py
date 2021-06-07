@@ -1,3 +1,4 @@
+from os import write
 import time
 from datetime import datetime
 from pytz import timezone
@@ -8,8 +9,9 @@ from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
+import trueskill as ts
 
-from main import get_skill, record_result, make_teams, get_leaderboard
+from main import set_rating, get_skill, record_result, make_teams, get_leaderboard
 
 # local time zone
 central = timezone('US/Central')
@@ -240,7 +242,7 @@ class Valorant(commands.Cog):
                 if 'history' not in db:
                     db['history'] = []
                 history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now()})
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now(), 'old_ratings': attackers | defenders})
             
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
@@ -263,7 +265,7 @@ class Valorant(commands.Cog):
                 if 'history' not in db:
                     db['history'] = []
                 history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score, 'time': datetime.now()})
+                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score, 'time': datetime.now(), 'old_ratings': attackers | defenders})
             
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
@@ -377,12 +379,31 @@ class Valorant(commands.Cog):
             skill = get_skill(authorid, ctx.guild.id)
             await ctx.send(f'\t<@!{authorid}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}')
 
+    @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
+    async def _undo(self, ctx: SlashContext):
+        # reset the ratings
+        with shelve.open(str(ctx.guild.id), writeback=True) as db:
+            if 'history' not in db or not db['history']:
+                await ctx.send('No recorded matches.')
+                return
+            match = db['history'][-1]
+            for player in match['attackers']:
+                set_rating(player, match['old_ratings']['player'], ctx.guild.id)
+            for player in match['defenders']:
+                set_rating(player, match['old_ratings']['player'], ctx.guild.id)
+
+            # delete from match history
+            del match
+        # reset the record cooldown
+        del guild_to_last_result_time[ctx.guild.id]
+
     @cog_ext.cog_slash(name='history', description='view the last 10 matches', guild_ids=GUILDS)
     async def _history(self, ctx: SlashContext):
         output = []
         with shelve.open(str(ctx.guild.id)) as db:
-            if 'history' not in db:
+            if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
+                return
             history = db['history'][-10:]
             history.reverse()
             for match in history:
