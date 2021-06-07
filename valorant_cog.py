@@ -9,7 +9,7 @@ from discord_slash.utils.manage_commands import create_option, create_choice
 from main import get_skill, record_result, make_teams, get_leaderboard
 
 # global discord id lists
-GUILDS = [825900837083676732, 342839495328137216]
+GUILDS = [825900837083676732]
 ADMINS = [335828416412778496, 263745246821744640]
 
 # VALORANT MAPS
