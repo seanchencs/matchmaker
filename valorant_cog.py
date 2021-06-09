@@ -386,7 +386,6 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             match = db['history'][-1]
-            print('about to reset ratings')
             for player in match['attackers']:
                 set_rating(str(player), match['old_ratings'][player], ctx.guild.id)
             for player in match['defenders']:
@@ -424,9 +423,9 @@ class Valorant(commands.Cog):
                 # plot rating history
                 past_ratings = get_past_ratings(userid, ctx.guild.id)
                 # scaling
-                if len(past_ratings < 30):
+                if len(past_ratings) < 30:
                     past_ratings = [val for val in past_ratings for _ in (0, 1)]
-                if len(past_ratings > 60):
+                if len(past_ratings) > 60:
                     past_ratings = past_ratings[::len(past_ratings)//30]
                 output.append('`' + plot(past_ratings) + '`\n')
 
@@ -446,9 +445,9 @@ class Valorant(commands.Cog):
                 history.reverse()
                 all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in db['ratings']]
                 # scaling
-                if len(all_past_ratings < 30):
+                if len(all_past_ratings) < 30:
                     all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings]
-                if len(all_past_ratings > 60):
+                if len(all_past_ratings) > 60:
                     all_past_ratings = [[past_ratings[::len(past_ratings)//30]] for past_ratings in all_past_ratings]
                 output.append('`' + plot(all_past_ratings) + '`\n')
                 for match in history:
@@ -458,7 +457,6 @@ class Valorant(commands.Cog):
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
-                print(all_past_ratings)
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
