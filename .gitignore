@@ -2,4 +2,4 @@
 .log
 .db
 .env
-test_cog.py
+cogs/test_cog.py
