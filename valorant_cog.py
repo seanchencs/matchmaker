@@ -233,13 +233,6 @@ class Valorant(commands.Cog):
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
             attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], winning_score, losing_score, ctx.guild.id)
-            
-            with shelve.open(str(ctx.guild.id), writeback=True) as db:
-                if 'history' not in db:
-                    db['history'] = []
-                history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': winning_score, 'defender_score': losing_score, 'time': datetime.now(), 'old_ratings': {**attackers, **defenders}})
-            
             output = []
             output = '**Win for** ***Attackers*** **recorded.**\n'
             output += f"\n**Attackers - {winning_score}:**\n"
@@ -256,13 +249,6 @@ class Valorant(commands.Cog):
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
             attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], losing_score, winning_score, ctx.guild.id)
-            
-            with shelve.open(str(ctx.guild.id), writeback=True) as db:
-                if 'history' not in db:
-                    db['history'] = []
-                history = db['history']
-                history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': losing_score, 'defender_score': winning_score, 'time': datetime.now(), 'old_ratings': {**attackers, **defenders}})
-            
             output = []
             output = '**Win for** ***Defenders*** **recorded.**\n'
             output += f"\n**Attackers - {losing_score}:**\n"
