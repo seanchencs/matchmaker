@@ -60,9 +60,7 @@ class Valorant(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        '''
-        Clean up created voice channels if they're empty.
-        '''
+        """Clean up created voice channels if they're empty."""
         if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != 'valorant':
             return
         guild = before.channel.guild
