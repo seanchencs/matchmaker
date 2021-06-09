@@ -436,8 +436,10 @@ class Valorant(commands.Cog):
 
                 # list of past matches
                 if len(history) > 10:
-                    history = history[:10]
-                for match in history:
+                    recent = history[:10]
+                else:
+                    recent = history
+                for match in recent:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
@@ -446,6 +448,8 @@ class Valorant(commands.Cog):
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['attackers'][userid].mu, 2)})`\n")
                     else:
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['defenders'][userid].mu, 2)})`\n")
+                if len(history) > 10:
+                    output.append(f"`... and {len(history)-10} more`")
             else:
                 # guild-wide match history
                 history = db['history'][-10:]
@@ -468,6 +472,8 @@ class Valorant(commands.Cog):
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
+                if len(db['history']) > 10:
+                    output.append(f"`... and {len(db['history'])-10} more`")
 
         await ctx.send(''.join(output))
 
