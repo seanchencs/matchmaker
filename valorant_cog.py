@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 from pytz import timezone
 import random
 import shelve
