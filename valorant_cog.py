@@ -449,7 +449,6 @@ class Valorant(commands.Cog):
                     all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings]
                 if all_past_ratings and len(all_past_ratings[0]) > 60:
                     all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
-                    print(all_past_ratings)
                 output.append('`' + plot(all_past_ratings) + '`\n')
                 for match in history:
                     # match info
