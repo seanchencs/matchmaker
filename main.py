@@ -76,7 +76,6 @@ def get_skill(userid, guildid):
         new_rating = ts.Rating()
         ratings_cache[guildid][userid] = new_rating
         ratings[userid] = new_rating.mu, new_rating.sigma
-        db['ratings'][userid] = new_rating.mu, new_rating.sigma
     return new_rating
 
 def set_rating(userid, rating, guildid):
@@ -105,10 +104,10 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
         ratings = db['ratings']
         for uid in attackers:
             ratings_cache[str(guildid)][str(uid)] = attackers_new[str(uid)]
-            ratings[str(uid)] = attackers_new[uid].mu, attackers_new[str(uid)].sigma
+            ratings[str(uid)] = attackers_new[str(uid)].mu, attackers_new[str(uid)].sigma
         for uid in defenders:
             ratings_cache[str(guildid)][str(uid)] = defenders_new[str(uid)]
-            ratings[str(uid)] = defenders_new[uid].mu, defenders_new[str(uid)].sigma
+            ratings[str(uid)] = defenders_new[str(uid)].mu, defenders_new[str(uid)].sigma
         # record in match history
         if 'history' not in db:
             db['history'] = []

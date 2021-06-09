@@ -1,5 +1,5 @@
 from main import record_result
-from random import random
+import random
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 
@@ -12,8 +12,8 @@ class Test(commands.Cog):
     
     @cog_ext.cog_slash(name='test', guild_ids=GUILDS, description='test')
     async def _test(self, ctx: SlashContext):
-        members = ctx.guild.members
-        for _ in range(100):
+        members = [member.id for member in ctx.guild.members]
+        for _ in range(10):
             players = random.sample(members, 2)
             attacker, defender = players[0], players[1]
             record_result([attacker], [defender], random.randint(0, 13), random.randint(0, 13), ctx.guild.id)
