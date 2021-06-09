@@ -425,7 +425,7 @@ class Valorant(commands.Cog):
                 past_ratings = get_past_ratings(userid, ctx.guild.id)
                 # scaling
                 if len(past_ratings) < 30:
-                    past_ratings = [val for val in past_ratings for _ in (0, ceil(90//len(past_ratings)))]
+                    past_ratings = [val for val in past_ratings for _ in (0, ceil(90/len(past_ratings)))]
                 if len(past_ratings) > 60:
                     past_ratings = past_ratings[::len(past_ratings)//30]
                 output.append('`' + plot(past_ratings) + '`\n')
@@ -452,7 +452,7 @@ class Valorant(commands.Cog):
 
                 # scaling
                 if all_past_ratings and len(all_past_ratings[0]) < 30:
-                    all_past_ratings = [[val for val in past_ratings for _ in (0, ceil(90//len(past_ratings)))] for past_ratings in all_past_ratings]
+                    all_past_ratings = [[val for val in past_ratings for _ in (0, ceil(90/len(past_ratings)))] for past_ratings in all_past_ratings]
                 if all_past_ratings and len(all_past_ratings[0]) > 60:
                     all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
                 output.append('`' + plot(all_past_ratings) + '`\n\n')
