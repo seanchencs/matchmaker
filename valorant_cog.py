@@ -431,7 +431,7 @@ class Valorant(commands.Cog):
 
                 # win/loss
                 win, loss = get_win_loss(userid, ctx.guild.id)
-                output.append(f'Match History ({win}W {loss}L):\n')
+                output.append(f'`Match History ({win}W {loss}L):`\n')
 
                 # list of past matches
                 for match in history:
