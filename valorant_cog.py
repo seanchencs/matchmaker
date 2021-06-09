@@ -435,6 +435,8 @@ class Valorant(commands.Cog):
                 output.append(f'\n`Match History ({win}W {loss}L):`\n')
 
                 # list of past matches
+                if len(history) > 10:
+                    history = history[:10]
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
