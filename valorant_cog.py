@@ -9,7 +9,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 from asciichartpy import plot
 
-from main import get_past_ratings, get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
+from main import get_leaderboard_by_exposure, get_past_ratings, get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
 
 # local time zone
 central = timezone('US/Central')
@@ -260,10 +260,30 @@ class Valorant(commands.Cog):
             # send output
             await ctx.send(''.join(output))
     
-    @cog_ext.cog_slash(name='leaderboard', description='get list of players on server sorted by rating', guild_ids=GUILDS)
-    async def _leaderboard(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name='leaderboard', description='get list of players on server sorted by rating', guild_ids=GUILDS, options=[
+        create_option(
+            name='metric',
+            description='metric to sort leaderboard',
+            option_type=3,
+            required=False,
+            choices=[
+                create_choice(
+                    name='mean',
+                    value='mean'
+                ),
+                create_choice(
+                    name='exposure',
+                    value='exposure'
+                )
+            ]
+        )
+    ])
+    async def _leaderboard(self, ctx: SlashContext, metric='mean'):
         start_time = time.time()
-        leaderboard = get_leaderboard(ctx.guild.id)
+        if metric == 'mean':
+            leaderboard = get_leaderboard(ctx.guild.id)
+        elif metric == 'exposure':
+            leaderboard = get_leaderboard_by_exposure(ctx.guild.id)
         if not leaderboard:
             await ctx.send('No Ranked Players.')
             return

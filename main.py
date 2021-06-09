@@ -49,12 +49,7 @@ def db_string(guildid):
     return ' '.join(output)
 
 def get_skill(userid, guildid):
-    '''
-    Returns the TrueSkill rating of a discord user.
-    Will initialize skill if none is found.
-    :param userid: Discord userid to find
-    :return: stored TrueSkill rating object of userid
-    '''
+    """Returns the TrueSkill rating of a discord user. Will initialize skill if none is found."""
     userid = str(userid)
     guildid = str(guildid)
 
@@ -66,6 +61,7 @@ def get_skill(userid, guildid):
     
     print(f'Cache Miss: guildid = {guildid} userid = {userid}')
 
+    # check db
     with shelve.open(str(guildid), writeback=True) as db:
         if 'ratings' not in db:
             db['ratings'] = {}
@@ -74,11 +70,13 @@ def get_skill(userid, guildid):
             mu, sigma = ratings[userid]
             return ts.Rating(float(mu), float(sigma))
         new_rating = ts.Rating()
+        # write to cache and db
         ratings_cache[guildid][userid] = new_rating
         ratings[userid] = new_rating.mu, new_rating.sigma
     return new_rating
 
 def set_rating(userid, rating, guildid):
+    """Set the rating of a user."""
     userid = str(userid)
     guildid = str(guildid)
     # write to cache
@@ -90,10 +88,9 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
-        print(ratings_cache[guildid][userid], db['ratings'][userid])
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
-    '''Updates the TrueSkill ratings given a result.'''
+    """Updates the TrueSkill ratings given a result."""
     attacker_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in attackers}
     defender_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in defenders}
     if attacker_score > defender_score:
@@ -116,12 +113,7 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
         return attacker_ratings, defender_ratings, attackers_new, defenders_new
 
 def make_teams(players, guildid, pool=10):
-    '''
-    Make teams based on rating.
-    :param players: list of userid of participating players
-    :param pool: number of matches to generate from which the best is chosen
-    :return: t (list of userids), ct (list of userids), predicted quality of match
-    '''
+    """Make teams based on rating."""
     player_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in players}
     t = ct = []
     best_quality = 0.0
@@ -138,6 +130,7 @@ def make_teams(players, guildid, pool=10):
     return t, ct, best_quality
 
 def get_win_loss(userid, guildid):
+    """Get win/loss counts for a user."""
     userid = str(userid)
     wins, losses = 0, 0
     with shelve.open(str(guildid)) as db:
@@ -156,6 +149,7 @@ def get_win_loss(userid, guildid):
     return wins, losses
 
 def get_past_ratings(userid, guildid, pad=False):
+    """Get a list of past ratings(mu) for a user."""
     past_ratings = []
     with shelve.open(str(guildid)) as db:
         if 'history' in db:
@@ -175,14 +169,19 @@ def get_past_ratings(userid, guildid, pad=False):
     return past_ratings
 
 def get_leaderboard(guildid):
-    '''
-    Gets list of userids and TrueSkill ratings, sorted by current rating
-    :return: list of (userid, TrueSkill.Rating) tuples, sorted by rating
-    '''
+    """Gets list of userids and TrueSkill ratings, sorted by current rating."""
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
+        return None
+
+def get_leaderboard_by_exposure(guildid):
+    """Get leaderboard sorted by exposure (see trueskill.org for more info)."""
+    with shelve.open(str(guildid)) as db:
+        if 'ratings' in db:
+            ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
+            return sorted(ratings.items(), key=ts.expose, reverse=True)
         return None
 
 @bot.event
