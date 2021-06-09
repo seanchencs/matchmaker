@@ -29,7 +29,7 @@ guild_to_last_result_time = {}
 
 class Valorant(commands.Cog):
     def __init__(self, bot):
-        """VALORANT commands for matchmaking Discord bot"""
+        """VALORANT commands for matchmaking Discord bot."""
         self.bot = bot
 
     @commands.Cog.listener()
@@ -255,7 +255,7 @@ class Valorant(commands.Cog):
         if not guild_to_teams[ctx.guild.id]['defenders']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            defenders, attackers, defenders_new, attackers_new = record_result(guild_to_teams[ctx.guild.id]['defenders'], guild_to_teams[ctx.guild.id]['attackers'], winning_score, losing_score, ctx.guild.id)
+            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], losing_score, winning_score, ctx.guild.id)
             
             with shelve.open(str(ctx.guild.id), writeback=True) as db:
                 if 'history' not in db:

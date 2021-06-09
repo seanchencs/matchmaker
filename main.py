@@ -1,15 +1,19 @@
+import datetime
+import logging
 import os
 import random
 import shelve
-import logging
-
+import dotenv
 import discord
+import trueskill as ts
 from discord.ext import commands
 from discord_slash import SlashCommand
 
-import trueskill as ts
-
 from CustomTrueSkill import rate_with_round_score
+
+# load env
+if os.path.isfile('.env'):
+    dotenv.load_dotenv('.env')
 
 # set up logging
 logger = logging.getLogger('discord')
@@ -72,7 +76,7 @@ def get_skill(userid, guildid):
         ratings_cache[guildid][userid] = new_rating
         ratings[userid] = new_rating.mu, new_rating.sigma
         db['ratings'][userid] = new_rating.mu, new_rating.sigma
-        return new_rating
+    return new_rating
 
 def set_rating(userid, rating, guildid):
     userid = str(userid)
@@ -88,25 +92,28 @@ def set_rating(userid, rating, guildid):
         db['ratings'][userid] = rating.mu, rating.sigma
         print(ratings_cache[guildid][userid], db['ratings'][userid])
 
-def record_result(winning_team, losing_team, winning_score, losing_score, guildid):
-    '''
-    Updates the TrueSkill ratings given a result.
-    :param winning_team: list of userids of players on the winning team
-    :param losing_team: list of userids of players on the losing team
-    :return: old winning team ratings, old losing team ratings, new winning team ratings, new losing team ratings
-    '''
-    winning_team_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in winning_team}
-    losing_team_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in losing_team}
-    winning_team_ratings_new, losing_team_ratings_new = rate_with_round_score(winning_team_ratings, losing_team_ratings, winning_score, losing_score)
+def record_result(attackers, defenders, attacker_score, defender_score, guildid):
+    '''Updates the TrueSkill ratings given a result.'''
+    attacker_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in attackers}
+    defender_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in defenders}
+    if attacker_score > defender_score:
+        attackers_new, defenders_new = rate_with_round_score(attacker_ratings, defender_ratings, attacker_score, defender_score)
+    else:
+        defenders_new, attackers_new = rate_with_round_score(defender_ratings, attacker_ratings, defender_score, attacker_score)
     with shelve.open(str(guildid), writeback=True) as db:
         ratings = db['ratings']
-        for uid in winning_team_ratings:
-            ratings_cache[str(guildid)][str(uid)] = winning_team_ratings_new[str(uid)]
-            ratings[str(uid)] = winning_team_ratings_new[uid].mu, winning_team_ratings_new[str(uid)].sigma
-        for uid in losing_team_ratings:
-            ratings_cache[str(guildid)][str(uid)] = losing_team_ratings_new[str(uid)]
-            ratings[str(uid)] = losing_team_ratings_new[uid].mu, losing_team_ratings_new[str(uid)].sigma
-        return winning_team_ratings, losing_team_ratings, winning_team_ratings_new, losing_team_ratings_new
+        for uid in attackers:
+            ratings_cache[str(guildid)][str(uid)] = attackers_new[str(uid)]
+            ratings[str(uid)] = attackers_new[uid].mu, attackers_new[str(uid)].sigma
+        for uid in defenders:
+            ratings_cache[str(guildid)][str(uid)] = defenders_new[str(uid)]
+            ratings[str(uid)] = defenders_new[uid].mu, defenders_new[str(uid)].sigma
+        # record in match history
+        if 'history' not in db:
+            db['history'] = []
+        history = db['history']
+        history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': attacker_score, 'defender_score': defender_score, 'time': datetime.now(), 'old_ratings': {**attacker_ratings, **defender_ratings}})
+        return attacker_ratings, defender_ratings, attackers_new, defenders_new
 
 def make_teams(players, guildid, pool=10):
     '''
