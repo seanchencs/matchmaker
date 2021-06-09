@@ -423,7 +423,11 @@ class Valorant(commands.Cog):
                 
                 # plot rating history
                 past_ratings = get_past_ratings(userid, ctx.guild.id)
-                past_ratings = [val for val in past_ratings for _ in (0, 1)] # duplicate elements for scaling
+                # scaling
+                if len(past_ratings < 30):
+                    past_ratings = [val for val in past_ratings for _ in (0, 1)]
+                if len(past_ratings > 60):
+                    past_ratings = past_ratings[::len(past_ratings)//30]
                 output.append('`' + plot(past_ratings) + '`\n')
 
                 # list of past matches
@@ -443,9 +447,9 @@ class Valorant(commands.Cog):
                 all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in db['ratings']]
                 # scaling
                 if len(all_past_ratings < 30):
-                    all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings] # duplicate elements for scaling
+                    all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings]
                 if len(all_past_ratings > 60):
-                    all_past_ratings = all_past_ratings[::len(all_past_ratings)//30]
+                    all_past_ratings = [[past_ratings[::len(past_ratings)//30]] for past_ratings in all_past_ratings]
                 output.append('`' + plot(all_past_ratings) + '`\n')
                 for match in history:
                     # match info
