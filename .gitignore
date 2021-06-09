@@ -1,4 +1,5 @@
 .replit
 .log
 .db
+.env
 test_cog.py

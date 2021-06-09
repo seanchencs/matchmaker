@@ -190,5 +190,6 @@ def get_leaderboard(guildid):
 async def on_ready():
     print('Logged in as {0.user}'.format(bot))
 
-bot.load_extension("valorant_cog")
+for filename in os.listdir('cogs'):
+    bot.load_extension(filename)
 bot.run(os.getenv('TOKEN'))
