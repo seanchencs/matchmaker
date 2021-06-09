@@ -23,7 +23,9 @@ class Test(commands.Cog):
             option_type=4,
             required=False,
         )
-    ])
+    ], permissions={
+        825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
+    })
     async def _test(self, ctx: SlashContext, count=5):
         members = [member.id for member in ctx.guild.members]
         for _ in range(count):
