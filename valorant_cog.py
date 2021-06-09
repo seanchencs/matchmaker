@@ -279,7 +279,6 @@ class Valorant(commands.Cog):
         )
     ])
     async def _leaderboard(self, ctx: SlashContext, metric='mean'):
-        start_time = time.time()
         if metric == 'mean':
             leaderboard = get_leaderboard(ctx.guild.id)
         elif metric == 'exposure':
@@ -300,7 +299,6 @@ class Valorant(commands.Cog):
                 else:
                     output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
                 last = item[1].mu, item[1].sigma, rank
-        print(f'[{ctx.guild.id}]: Leaderboard fetched in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
@@ -428,7 +426,7 @@ class Valorant(commands.Cog):
                     past_ratings = [val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))]
                 elif len(past_ratings) > 60:
                     past_ratings = past_ratings[::len(past_ratings)//30]
-                output.append('`' + plot(past_ratings) + '`\n')
+                output.append('`\n' + plot(past_ratings) + '`\n')
 
                 # win/loss
                 win, loss = get_win_loss(userid, ctx.guild.id)
@@ -461,7 +459,7 @@ class Valorant(commands.Cog):
                     all_past_ratings = [[val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))] for past_ratings in all_past_ratings]
                 if all_past_ratings and len(all_past_ratings[0]) > 60:
                     all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
-                output.append('`' + plot(all_past_ratings) + '`\n\n')
+                output.append('`\n' + plot(all_past_ratings) + '`\n\n')
 
                 if len(db['history']) > 10:
                     output.append(f'`10 most recent matches:`\n')
