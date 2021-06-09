@@ -1,10 +1,11 @@
-import datetime
 import logging
 import os
 import random
 import shelve
-import dotenv
+from datetime import datetime
+
 import discord
+import dotenv
 import trueskill as ts
 from discord.ext import commands
 from discord_slash import SlashCommand
