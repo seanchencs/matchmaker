@@ -153,14 +153,17 @@ def get_past_ratings(userid, guildid, pad=False):
     with shelve.open(str(guildid)) as db:
         if 'history' in db:
             if pad:
-                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
-            else:
                 history = db['history']
+            else:
+                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
             for match in history:
                 if userid in match['old_ratings']:
                     past_ratings.append(match['old_ratings'][userid].mu)
                 else:
-                    past_ratings.append(ts.global_env().mu)
+                    if past_ratings:
+                        past_ratings.append(past_ratings[-1])
+                    else:
+                        past_ratings.append(ts.global_env().mu)
             past_ratings.append(get_skill(userid, guildid).mu)
     return past_ratings
 
