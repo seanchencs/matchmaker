@@ -16,7 +16,9 @@ class Test(commands.Cog):
         for _ in range(10):
             players = random.sample(members, 2)
             attacker, defender = players[0], players[1]
-            record_result([attacker], [defender], random.randint(1, 13), random.randint(1, 13), ctx.guild.id)
+            attacker_score = random.choice((13, random.randint(0, 11)))
+            defender_score = random.randint(0, 11) if attacker_score == 13 else 13
+            record_result([attacker], [defender], attacker_score, defender_score, ctx.guild.id)
         await ctx.send("✅")
 
 def setup(bot):
