@@ -37,7 +37,8 @@ ratings_cache = {}
 # TrueSkill DB helper functions
 def delete_db(guildid):
     os.remove(f'{guildid}.db')
-    del ratings_cache[guildid]
+    if guildid in ratings_cache:
+        del ratings_cache[guildid]
 
 def db_string(guildid):
     output = []
