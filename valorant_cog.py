@@ -412,6 +412,7 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             if user:
+                # per-user match history
                 userid = str(user.id)
                 history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
                 history.reverse()
@@ -428,6 +429,10 @@ class Valorant(commands.Cog):
                     past_ratings = past_ratings[::len(past_ratings)//30]
                 output.append('`' + plot(past_ratings) + '`\n')
 
+                # win/loss
+                win, loss = get_win_loss(userid, ctx.guild.id)
+                output.append(f'Match History ({win}W {loss}L):\n')
+
                 # list of past matches
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
@@ -439,16 +444,18 @@ class Valorant(commands.Cog):
                     else:
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['defenders'][userid].mu, 2)})`\n")
             else:
-                # list of past matches
+                # guild-wide match history
                 history = db['history'][-10:]
                 history.reverse()
                 all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in db['ratings']]
+
                 # scaling
                 if all_past_ratings and len(all_past_ratings[0]) < 30:
                     all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings]
                 if all_past_ratings and len(all_past_ratings[0]) > 60:
                     all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
                 output.append('`' + plot(all_past_ratings) + '`\n')
+
                 for match in history:
                     # match info
                     output.append(f"`{match['time'].strftime(time_format)}: ")
@@ -456,6 +463,7 @@ class Valorant(commands.Cog):
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
+
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
