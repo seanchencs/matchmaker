@@ -35,10 +35,9 @@ env.make_as_global()
 ratings_cache = {}
 
 # TrueSkill DB helper functions
-def clear_db(guildid):
-    with shelve.open(str(guildid)) as db:
-        for key in db.keys():
-            del db[key]
+def delete_db(guildid):
+    os.remove(f'{guildid}.db')
+    del ratings_cache[guildid]
 
 def db_string(guildid):
     output = []

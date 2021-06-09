@@ -7,7 +7,7 @@ from discord_slash.model import SlashCommandPermissionType
 from discord_slash.utils.manage_commands import (create_option,
                                                  create_permission)
 
-from main import record_result
+from main import delete_db, record_result
 
 GUILDS = [825900837083676732]
 
@@ -38,7 +38,7 @@ class Test(commands.Cog):
         825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
     })
     async def _delete(self, ctx:SlashContext):
-        os.remove(f'{ctx.guild.id}.db')
+        delete_db(ctx.guild_id)
         await ctx.send("✅")
 
 def setup(bot):
