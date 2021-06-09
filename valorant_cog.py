@@ -420,7 +420,7 @@ class Valorant(commands.Cog):
                     return
                 rating_history = [match['old_ratings'][userid].mu for match in history]
                 rating_history.append(get_skill(userid, ctx.guild.id).mu)
-                output.append(plot(rating_history) + '\n')
+                output.append('`' + plot(rating_history) + '`\n')
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
