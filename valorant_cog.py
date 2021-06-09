@@ -419,7 +419,7 @@ class Valorant(commands.Cog):
                     await ctx.send('No recorded matches.')
                     return
                 rating_history = [match['old_ratings'][userid].mu for match in history]
-                rating_history.append(get_skill(userid).mu)
+                rating_history.append(get_skill(userid, ctx.guild.id).mu)
                 output.append(plot(rating_history) + '\n')
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
