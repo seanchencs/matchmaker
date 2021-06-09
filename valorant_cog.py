@@ -13,7 +13,7 @@ from main import get_past_ratings, get_win_loss, set_rating, get_skill, record_r
 
 # local time zone
 central = timezone('US/Central')
-time_format = '%Y-%m-%d %H:%M:%S'
+time_format = '%a %b %-d %-I:%M %p'
 
 # global discord id lists
 GUILDS = [825900837083676732]
