@@ -148,14 +148,20 @@ def get_win_loss(userid, guildid):
                         losses += 1
     return wins, losses
 
-def get_past_ratings(userid, guildid):
+def get_past_ratings(userid, guildid, pad=False):
     past_ratings = []
     with shelve.open(str(guildid)) as db:
         if 'history' in db:
-            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
-            history.reverse()
-            rating_history = [match['old_ratings'][userid].mu for match in history]
-            rating_history.append(get_skill(userid, guildid).mu)
+            if pad:
+                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            else:
+                history = db['history']
+            for match in history:
+                if userid in match['old_ratings']:
+                    past_ratings.append(match['old_ratings'][userid].mu)
+                else:
+                    past_ratings.append(ts.global_env().mu)
+            past_ratings.append(get_skill(userid, guildid).mu)
     return past_ratings
 
 def get_leaderboard(guildid):
@@ -165,7 +171,6 @@ def get_leaderboard(guildid):
     '''
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
-            # ratings = {id : ts.TrueSkill(db['ratings'][id][0], db['ratings'][id][1]) for id in db['ratings']}
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
         return None

@@ -438,25 +438,17 @@ class Valorant(commands.Cog):
                 # list of past matches
                 history = db['history'][-10:]
                 history.reverse()
-                all_past_ratings = defaultdict(list)
+                all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in db['ratings']]
+                all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings] # duplicate elements for scaling
+                output.append('`' + plot(all_past_ratings) + '`\n')
                 for match in history:
-                    # record
-                    for player in db['ratings'].keys():
-                        if player in match['old_ratings']:
-                            all_past_ratings[player].append(match['old_ratings'][player])
-                        else:
-                            if all_past_ratings[player]:
-                                all_past_ratings[player].append(all_past_ratings[player][-1])
-                            else:
-                                all_past_ratings[player.append(ts.global_env().mu)]
                     # match info
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
-                all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings] # duplicate elements for scaling
-                output.append('`' + plot(all_past_ratings) + '`\n')
+                print(all_past_ratings)
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
