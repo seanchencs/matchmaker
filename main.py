@@ -148,6 +148,16 @@ def get_win_loss(userid, guildid):
                         losses += 1
     return wins, losses
 
+def get_past_ratings(userid, guildid):
+    past_ratings = []
+    with shelve.open(str(guildid)) as db:
+        if 'history' in db:
+            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            history.reverse()
+            rating_history = [match['old_ratings'][userid].mu for match in history]
+            rating_history.append(get_skill(userid, guildid).mu)
+    return past_ratings
+
 def get_leaderboard(guildid):
     '''
     Gets list of userids and TrueSkill ratings, sorted by current rating

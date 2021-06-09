@@ -1,3 +1,4 @@
+from collections import defaultdict
 import time
 from datetime import datetime
 from pytz import timezone
@@ -7,10 +8,10 @@ import shelve
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
-
+import trueskill as ts
 from asciichartpy import plot
 
-from main import get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
+from main import get_past_ratings, get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
 
 # local time zone
 central = timezone('US/Central')
@@ -406,7 +407,6 @@ class Valorant(commands.Cog):
     )
     async def _history(self, ctx: SlashContext, user=None):
         output = []
-        
         with shelve.open(str(ctx.guild.id)) as db:
             if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
@@ -418,9 +418,13 @@ class Valorant(commands.Cog):
                 if not history:
                     await ctx.send('No recorded matches.')
                     return
-                rating_history = [match['old_ratings'][userid].mu for match in history]
-                rating_history.append(get_skill(userid, ctx.guild.id).mu)
-                output.append('`' + plot(rating_history) + '`\n')
+                
+                # plot rating history
+                past_ratings = get_past_ratings(userid, ctx.guild.id)
+                past_ratings = [val for val in past_ratings for _ in (0, 1)] # duplicate elements for scaling
+                output.append('`' + plot(past_ratings) + '`\n')
+
+                # list of past matches
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
@@ -431,14 +435,28 @@ class Valorant(commands.Cog):
                     else:
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['defenders'][userid].mu, 2)})`\n")
             else:
+                # list of past matches
                 history = db['history'][-10:]
                 history.reverse()
+                all_past_ratings = defaultdict(list)
                 for match in history:
+                    # record
+                    for player in db['ratings'].keys():
+                        if player in match['old_ratings']:
+                            all_past_ratings[player].append(match['old_ratings'][player])
+                        else:
+                            if all_past_ratings[player]:
+                                all_past_ratings[player].append(all_past_ratings[player][-1])
+                            else:
+                                all_past_ratings[player.append(ts.global_env().mu)]
+                    # match info
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
+                all_past_ratings = [[val for val in past_ratings for _ in (0, 1)] for past_ratings in all_past_ratings] # duplicate elements for scaling
+                output.append('`' + plot(all_past_ratings) + '`\n')
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
