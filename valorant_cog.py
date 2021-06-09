@@ -457,6 +457,8 @@ class Valorant(commands.Cog):
                     all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
                 output.append('`' + plot(all_past_ratings) + '`\n\n')
 
+                if len(db['history'] > 10):
+                    output.append(f'`10 most recent matches:`\n')
                 for match in history:
                     # match info
                     output.append(f"`{match['time'].strftime(time_format)}: ")
