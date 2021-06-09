@@ -8,6 +8,8 @@ from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
+from asciichartpy import plot
+
 from main import get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
 
 # local time zone
@@ -416,6 +418,9 @@ class Valorant(commands.Cog):
                 if not history:
                     await ctx.send('No recorded matches.')
                     return
+                rating_history = [match['old_ratings'][userid].mu for match in history]
+                rating_history.append(get_skill(userid).mu)
+                output.append(plot(rating_history) + '\n')
                 for match in history:
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
@@ -425,7 +430,6 @@ class Valorant(commands.Cog):
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['attackers'][userid].mu, 2)})`\n")
                     else:
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['defenders'][userid].mu, 2)})`\n")
-
             else:
                 history = db['history'][-10:]
                 history.reverse()
