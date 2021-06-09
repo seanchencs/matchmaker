@@ -181,7 +181,7 @@ def get_leaderboard_by_exposure(guildid):
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
-            return sorted(ratings.items(), key=ts.expose, reverse=True)
+            return sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
         return None
 
 @bot.event
