@@ -37,12 +37,14 @@ ratings_cache = {}
 
 # TrueSkill DB helper functions
 def delete_db(guildid):
+    guildid = str(guildid)
     os.remove(f'{guildid}.db')
     if guildid in ratings_cache:
         del ratings_cache[guildid]
 
 def db_string(guildid):
     output = []
+    guildid = str(guildid)
     with shelve.open(str(guildid)) as db:
         for key in db.keys():
             output.append(key)
@@ -127,6 +129,7 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
 def make_teams(players, guildid, pool=10):
     """Make teams based on rating."""
     start = time.time()
+    guildid = str(guildid)
     player_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in players}
     t = ct = []
     best_quality = 0.0
@@ -147,6 +150,7 @@ def get_win_loss(userid, guildid):
     """Get win/loss counts for a user."""
     start = time.time()
     userid = str(userid)
+    guildid = str(guildid)
     wins, losses = 0, 0
     with shelve.open(str(guildid)) as db:
         if 'history' in db:
@@ -167,6 +171,7 @@ def get_win_loss(userid, guildid):
 def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""
     start = time.time()
+    guildid = str(guildid)
     past_ratings = []
     with shelve.open(str(guildid)) as db:
         if 'history' in db:
@@ -189,6 +194,7 @@ def get_past_ratings(userid, guildid, pad=False):
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
     start = time.time()
+    guildid = str(guildid)
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
@@ -200,6 +206,7 @@ def get_leaderboard(guildid):
 def get_leaderboard_by_exposure(guildid):
     """Get leaderboard sorted by exposure (see trueskill.org for more info)."""
     start = time.time()
+    guildid = str(guildid)
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
