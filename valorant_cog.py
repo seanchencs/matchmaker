@@ -441,7 +441,7 @@ class Valorant(commands.Cog):
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                    output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     if userid in match['attackers']:
                         output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['attackers'][userid].mu, 2)})`\n")
                     else:
@@ -468,7 +468,7 @@ class Valorant(commands.Cog):
                     output.append(f"`{match['time'].strftime(time_format)}: ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                    output.append(','.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     output.append('`\n')
                 if len(db['history']) > 10:
                     output.append(f"`... and {len(db['history'])-10} more`")
