@@ -411,8 +411,11 @@ class Valorant(commands.Cog):
                 await ctx.send('No recorded matches.')
                 return
             if user:
-                # per-user match history
                 userid = str(user.id)
+                # title
+                skill = get_skill(user.id, ctx.guild.id)
+                output += f'**{user.name}** - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n'
+                # per-user match history
                 history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
                 history.reverse()
                 if not history:
