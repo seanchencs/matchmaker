@@ -1,10 +1,9 @@
-import os
 import random
 
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
 from discord_slash.model import SlashCommandPermissionType
-from discord_slash.utils.manage_commands import (create_option,
+from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
 
 from main import delete_db, record_result
