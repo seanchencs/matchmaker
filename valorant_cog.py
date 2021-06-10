@@ -414,7 +414,7 @@ class Valorant(commands.Cog):
                 userid = str(user.id)
                 # title
                 skill = get_skill(user.id, ctx.guild.id)
-                output += f'**{user.name}** - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n'
+                output += f'__**{user.name}**__ \n Current Rating: {round(skill.mu, 4)} ± {round(skill.sigma, 2)}\n'
                 # per-user match history
                 history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
                 history.reverse()
