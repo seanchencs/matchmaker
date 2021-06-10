@@ -59,7 +59,7 @@ def get_skill(userid, guildid):
     if guildid not in ratings_cache:
             ratings_cache[guildid] = {}
     if userid in ratings_cache[guildid]:
-        print(f'[{guildid}]: get_skill for {userid} in {time.time()-start}s')
+        print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
         return ratings_cache[guildid][userid]
     
     print(f'Cache Miss: guildid = {guildid} userid = {userid}')
@@ -71,14 +71,14 @@ def get_skill(userid, guildid):
         ratings = db['ratings']
         if userid in ratings:
             mu, sigma = ratings[userid]
-            print(f'[{guildid}]: get_skill for {userid} in {time.time()-start}s')
+            print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
             return ts.Rating(float(mu), float(sigma))
         new_rating = ts.Rating()
         # write to cache and db
         ratings_cache[guildid][userid] = new_rating
         ratings[userid] = new_rating.mu, new_rating.sigma
     
-    print(f'[{guildid}]: get_skill for {userid} in {time.time()-start}s')
+    print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return new_rating
 
 def set_rating(userid, rating, guildid):
@@ -95,7 +95,7 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
-    print(f'[{guildid}]: set_skill for {userid} in {time.time()-start}s')
+    print(f'[{guildid}]: set_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
     """Updates the TrueSkill ratings given a result."""
@@ -119,7 +119,7 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
             db['history'] = []
         history = db['history']
         history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': attacker_score, 'defender_score': defender_score, 'time': datetime.now(), 'old_ratings': {**attacker_ratings, **defender_ratings}})
-    print(f'[{guildid}]: record_result in {time.time()-start}s')
+    print(f'[{guildid}]: record_result in {round(1000*(time.time()-start), 2)}ms')
     return attacker_ratings, defender_ratings, attackers_new, defenders_new
 
 def make_teams(players, guildid, pool=10):
@@ -138,7 +138,7 @@ def make_teams(players, guildid, pool=10):
             t = list(t1.keys())
             ct = list(t2.keys())
             best_quality = quality
-    print(f'[{guildid}]: make_teams for in {time.time()-start}s')
+    print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
     return t, ct, best_quality
 
 def get_win_loss(userid, guildid):
@@ -159,7 +159,7 @@ def get_win_loss(userid, guildid):
                         wins += 1
                     else:
                         losses += 1
-    print(f'[{guildid}]: get_win_loss for {userid} in {time.time()-start}s')
+    print(f'[{guildid}]: get_win_loss for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return wins, losses
 
 def get_past_ratings(userid, guildid, pad=False):
@@ -181,7 +181,7 @@ def get_past_ratings(userid, guildid, pad=False):
                     else:
                         past_ratings.append(ts.global_env().mu)
             past_ratings.append(get_skill(userid, guildid).mu)
-    print(f'[{guildid}]: get_past_ratings for {userid} in {time.time()-start}s')
+    print(f'[{guildid}]: get_past_ratings for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return past_ratings
 
 def get_leaderboard(guildid):
@@ -190,9 +190,9 @@ def get_leaderboard(guildid):
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
-            print(f'[{guildid}]: get_leaderboard in {time.time()-start}s')
+            print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
-        print(f'[{guildid}]: get_leaderboard in {time.time()-start}s')
+        print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
         return None
 
 def get_leaderboard_by_exposure(guildid):
@@ -201,9 +201,9 @@ def get_leaderboard_by_exposure(guildid):
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
-            print(f'[{guildid}]: get_leaderboard_by_exposure in {time.time()-start}s')
+            print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
-        print(f'[{guildid}]: get_leaderboard_by_exposure in {time.time()-start}s')
+        print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
         return None
 
 @bot.event
