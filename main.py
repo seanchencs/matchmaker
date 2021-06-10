@@ -107,6 +107,8 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
     else:
         defenders_new, attackers_new = rate_with_round_score(defender_ratings, attacker_ratings, defender_score, attacker_score)
     with shelve.open(str(guildid), writeback=True) as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
         ratings = db['ratings']
         for uid in attackers:
             ratings_cache[str(guildid)][str(uid)] = attackers_new[str(uid)]
