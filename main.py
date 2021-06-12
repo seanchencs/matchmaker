@@ -189,7 +189,7 @@ def time_since_last_match(userid, guildid):
         if 'history' in db:
             history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
             if history:
-                return datetime.combine(date.today(), time.time()) - datetime.combine(date.today(), history[-1]['time'])
+                return datetime.combine(date.today(), datetime.now()) - datetime.combine(date.today(), history[-1]['time'])
     return None
 
 def get_past_ratings(userid, guildid, pad=False):
