@@ -29,7 +29,7 @@ bot = commands.Bot(command_prefix='.', intents=discord.Intents.all())
 slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
 
 # TrueSkill Rating Settings
-env = ts.TrueSkill(draw_probability=0.05)
+env = ts.TrueSkill(draw_probability=0.01)
 env.make_as_global()
 
 # TrueSkill DB cache
@@ -61,8 +61,10 @@ def get_skill(userid, guildid):
     if guildid not in ratings_cache:
             ratings_cache[guildid] = {}
     if userid in ratings_cache[guildid]:
+        current_rating = ratings_cache[guildid][userid]
+        rating = ts.Rating(current_rating.mu, min(current_rating.sigma + get_decay(userid, guildid), ts.global_env().sigma))
         print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
-        return ratings_cache[guildid][userid]
+        return rating
     
     print(f'Cache Miss: guildid = {guildid} userid = {userid}')
 
@@ -73,8 +75,10 @@ def get_skill(userid, guildid):
         ratings = db['ratings']
         if userid in ratings:
             mu, sigma = ratings[userid]
+            current_rating = ts.Rating(float(mu), float(sigma))
+            rating = ts.Rating(current_rating.mu, min(current_rating.sigma + get_decay(userid, guildid), ts.global_env().sigma))
             print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
-            return ts.Rating(float(mu), float(sigma))
+            return rating
         new_rating = ts.Rating()
         # write to cache and db
         ratings_cache[guildid][userid] = new_rating
@@ -82,6 +86,16 @@ def get_skill(userid, guildid):
     
     print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return new_rating
+
+def get_decay(userid, guildid):
+    userid, guildid = str(userid), str(guildid)
+
+    with shelve.open(guildid, writeback=True) as db:
+        last_match = time_since_last_match(userid, guildid)
+        if last_match:
+            return 0.0001 * ((last_match/1000) ** 1.4)
+        else:
+            return 0
 
 def set_rating(userid, rating, guildid):
     """Set the rating of a user."""
@@ -167,6 +181,16 @@ def get_win_loss(userid, guildid):
                         losses += 1
     print(f'[{guildid}]: get_win_loss for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return wins, losses
+
+def time_since_last_match(userid, guildid):
+    """Returns the time in seconds since user's last match."""
+    userid, guildid = str(userid), str(guildid)
+    with shelve.open(guildid) as db:
+        if 'history' in db:
+            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            if history:
+                return history[-1]
+    return None
 
 def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""
