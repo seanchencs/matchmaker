@@ -287,7 +287,7 @@ class Valorant(commands.Cog):
         if method == 'random':
             map = random.choice(VALORANT_MAP_POOL)
             await ctx.send(f'**MAP: {map}**')
-        elif method == 'vetos':
+        elif method == 'veto':
             if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
                 await ctx.send(f'use /make before veto')
                 return
