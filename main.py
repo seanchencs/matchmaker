@@ -2,7 +2,7 @@ import logging
 import os
 import random
 import shelve
-from datetime import date, datetime
+from datetime import datetime
 import time
 
 import discord
