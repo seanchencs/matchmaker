@@ -143,7 +143,7 @@ def make_teams(players, guildid, pool=10):
     start = time.time()
     guildid = str(guildid)
     player_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in players}
-    t = ct = []
+    team_a = team_b = []
     best_quality = 0.0
     for _ in range(pool):
         random.shuffle(players)
@@ -152,11 +152,13 @@ def make_teams(players, guildid, pool=10):
         t2 = {str(uid) : player_ratings[str(uid)] for uid in players[team_size:]}
         quality = ts.quality([t1, t2])
         if quality > best_quality:
-            t = list(t1.keys())
-            ct = list(t2.keys())
+            team_a = list(t1.keys())
+            team_b = list(t2.keys())
             best_quality = quality
+    # sort teams by rating
+    team_a, team_b = sorted(team_a, key=get_skill), sorted(team_b, key=get_skill)
     print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
-    return t, ct, best_quality
+    return team_a, team_b, best_quality
 
 def get_win_loss(userid, guildid):
     """Get win/loss counts for a user."""

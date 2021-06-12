@@ -1,5 +1,6 @@
 from math import ceil
 import time
+from discord import guild
 from pytz import timezone
 import random
 import shelve
@@ -21,11 +22,15 @@ ADMINS = [335828416412778496, 263745246821744640]
 
 # VALORANT MAPS
 VALORANT_MAP_POOL = ['Bind', 'Haven', 'Split', 'Ascent', 'Icebox', 'Breeze']
+VALORANT_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in VALORANT_MAP_POOL]
+
 
 # dicts for guild-local variables
-guild_to_start_msg = {}
-guild_to_teams = {}
-guild_to_last_result_time = {}
+guild_to_start_msg = {} # message id of start message
+guild_to_teams = {} # {'attackers': [list of uids], 'defenders': [list of uids]}
+guild_to_last_result_time = {} # time of last recorded result (for record cooldown)
+guild_to_remaining_maps = {} # list of remaining maps in veto process
+guild_to_next_team_to_veto = {} # 'attackers' or 'defenders' next to veto
 
 class Valorant(commands.Cog):
     def __init__(self, bot):
@@ -260,6 +265,81 @@ class Valorant(commands.Cog):
             # send output
             await ctx.send(''.join(output))
     
+    @cog_ext.cog_slash(name='map', description='choose a map randomly or through vetos', guild_ids=GUILDS, options=[
+        create_option(
+            name='method',
+            description='method to choose a map',
+            option_type=3,
+            required=False,
+            choices=[
+                create_choice(
+                    name='random',
+                    value='random'
+                ),
+                create_choice(
+                    name='veto',
+                    value='veto'
+                )
+            ]
+        )
+    ])
+    async def _map(self, ctx: SlashContext, method='random'):
+        if method == 'random':
+            map = random.choice(VALORANT_MAP_POOL)
+            await ctx.send(f'**MAP: {map}**')
+        elif method == 'vetos':
+            if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
+                await ctx.send(f'use /make before veto')
+                return
+            guild_to_remaining_maps[ctx.guild.id] = VALORANT_MAP_POOL.copy()
+            # next to veto
+            a_total = [get_skill(a).mu for a in guild_to_teams[ctx.guild.id]['attackers']].sum()
+            d_total = [get_skill(a).mu for a in guild_to_teams[ctx.guild.id]['defenders']].sum()
+            if a_total > d_total:
+                guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
+            else:
+                guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
+            
+
+    @cog_ext.cog_slash(name='veto', description='veto a', guild_ids=GUILDS, options=[
+        create_option(
+            name='choice',
+            description='map to veto',
+            option_type=3,
+            required=True,
+            choices=VALORANT_SLASH_CHOICES
+        )
+    ])
+    async def _veto(self, ctx: SlashContext, choice):
+        if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
+            await ctx.send('Use /make and /map veto before vetoing.')
+            return
+        if ctx.guild.id not in guild_to_remaining_maps or not guild_to_remaining_maps[ctx.guild.id]:
+            await ctx.send('No maps to veto.')
+            return
+        if ctx.author.id not in guild_to_teams[ctx.guild.id][guild_to_next_team_to_veto[ctx.guild.id]]:
+            await ctx.send('Not your turn.')
+            return
+        if choice not in guild_to_remaining_maps[ctx.guild.id]:
+            await ctx.send('Map already vetoed.')
+            return
+
+        output = []
+        guild_to_remaining_maps[ctx.guild.id].remove(choice)
+        output += (f'**{choice}** vetoed.')
+
+        if len(guild_to_remaining_maps[ctx.guild.id]) == 1:
+            await ctx.send(f'**MAP: {guild_to_remaining_maps[ctx.guild.id][0]}**')
+            guild_to_remaining_maps[ctx.guild.id] = []
+            return
+
+        if guild_to_next_team_to_veto[ctx.guild.id] == 'attackers':
+            guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
+        else:
+            guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
+
+        output += (f'Remaining Maps: **{", ".join(guild_to_remaining_maps[ctx.guild.id])}**')
+
     @cog_ext.cog_slash(name='leaderboard', description='get list of players on server sorted by rating', guild_ids=GUILDS, options=[
         create_option(
             name='metric',
