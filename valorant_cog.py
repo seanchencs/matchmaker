@@ -278,7 +278,7 @@ class Valorant(commands.Cog):
             ]
         )
     ])
-    async def _leaderboard(self, ctx: SlashContext, metric='mean'):
+    async def _leaderboard(self, ctx: SlashContext, metric='exposure'):
         if metric == 'mean':
             leaderboard = get_leaderboard(ctx.guild.id)
         elif metric == 'exposure':
