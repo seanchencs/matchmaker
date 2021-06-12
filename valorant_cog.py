@@ -319,7 +319,7 @@ class Valorant(commands.Cog):
             await ctx.send('No maps to veto.')
             return
         if ctx.author.id not in guild_to_teams[ctx.guild.id][guild_to_next_team_to_veto[ctx.guild.id]]:
-            print(ctx.author.id, guild_to_teams[ctx.guild.id][guild_to_next_team_to_veto[ctx.guild.id]])
+            print(ctx.author.id, guild_to_next_team_to_veto[ctx.guild.id], guild_to_teams[ctx.guild.id][guild_to_next_team_to_veto[ctx.guild.id]])
             await ctx.send('Not your turn.')
             return
         if choice not in guild_to_remaining_maps[ctx.guild.id]:
