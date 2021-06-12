@@ -243,7 +243,7 @@ class Valorant(commands.Cog):
                 output += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
             # send output
             await ctx.send(''.join(output))
-    
+
     async def _defenders(self, winning_score, losing_score, ctx: SlashContext):
         if not guild_to_teams[ctx.guild.id]['defenders']:
             await ctx.send('use *$make* or *$rated* before recording a result')
@@ -462,7 +462,7 @@ class Valorant(commands.Cog):
                 output.append('`Rating History:\n' + plot(all_past_ratings) + '`\n\n')
 
                 if len(db['history']) > 10:
-                    output.append(f'`10 most recent matches:`\n')
+                    output.append('`10 most recent matches:`\n')
                 for match in history:
                     # match info
                     output.append(f"`{match['time'].strftime(time_format)}: ")

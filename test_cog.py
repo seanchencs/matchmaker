@@ -13,7 +13,7 @@ class Test(commands.Cog):
     def __init__(self, bot):
         """Generate test matches."""
         self.bot = bot
-    
+
     @cog_ext.cog_slash(name='test', guild_ids=GUILDS, description='generate random results', options=[
         create_option(
             name='type',
