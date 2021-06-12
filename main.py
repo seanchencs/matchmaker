@@ -93,7 +93,7 @@ def get_decay(userid, guildid):
     with shelve.open(guildid, writeback=True) as db:
         last_match = time_since_last_match(userid, guildid)
         if last_match:
-            return 0.0001 * ((last_match/1000) ** 1.4)
+            return 0.001 * ((last_match/50000) ** 2)
         else:
             return 0
 
