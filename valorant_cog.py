@@ -299,6 +299,7 @@ class Valorant(commands.Cog):
                 guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
             else:
                 guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
+            await ctx.send(f"{guild_to_next_team_to_veto[ctx.guild.id].capitalize()} turn to /veto")
             
 
     @cog_ext.cog_slash(name='veto', description='veto a', guild_ids=GUILDS, options=[
@@ -326,10 +327,11 @@ class Valorant(commands.Cog):
 
         output = []
         guild_to_remaining_maps[ctx.guild.id].remove(choice)
-        output += (f'**{choice}** vetoed.')
+        output += (f'**{choice}** vetoed.\n')
 
         if len(guild_to_remaining_maps[ctx.guild.id]) == 1:
-            await ctx.send(f'**MAP: {guild_to_remaining_maps[ctx.guild.id][0]}**')
+            output += f'**MAP: {guild_to_remaining_maps[ctx.guild.id][0]}**\n'
+            await ctx.send(''.join(output))
             guild_to_remaining_maps[ctx.guild.id] = []
             return
 
@@ -338,7 +340,9 @@ class Valorant(commands.Cog):
         else:
             guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
 
-        output += (f'Remaining Maps: **{", ".join(guild_to_remaining_maps[ctx.guild.id])}**')
+        output += f'Remaining Maps: **{", ".join(guild_to_remaining_maps[ctx.guild.id])}**\n'
+        output += f"{guild_to_next_team_to_veto[ctx.guild.id].capitalize()} turn to /veto\n"
+        await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='leaderboard', description='get list of players on server sorted by rating', guild_ids=GUILDS, options=[
         create_option(
