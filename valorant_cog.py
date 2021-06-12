@@ -293,8 +293,8 @@ class Valorant(commands.Cog):
                 return
             guild_to_remaining_maps[ctx.guild.id] = VALORANT_MAP_POOL.copy()
             # next to veto
-            a_total = [get_skill(a).mu for a in guild_to_teams[ctx.guild.id]['attackers']].sum()
-            d_total = [get_skill(a).mu for a in guild_to_teams[ctx.guild.id]['defenders']].sum()
+            a_total = [get_skill(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id]['attackers']].sum()
+            d_total = [get_skill(d, ctx.guild.id).mu for d in guild_to_teams[ctx.guild.id]['defenders']].sum()
             if a_total > d_total:
                 guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
             else:

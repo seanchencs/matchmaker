@@ -156,7 +156,7 @@ def make_teams(players, guildid, pool=10):
             team_b = list(t2.keys())
             best_quality = quality
     # sort teams by rating
-    team_a, team_b = sorted(team_a, key=get_skill), sorted(team_b, key=get_skill)
+    team_a, team_b = sorted(team_a, key=lambda x : get_skill(x, guildid)), sorted(team_b, key=lambda x : get_skill(x, guildid))
     print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
     return team_a, team_b, best_quality
 
