@@ -32,15 +32,10 @@ slash = SlashCommand(bot, sync_commands=True, sync_on_cog_reload=True)
 env = ts.TrueSkill(draw_probability=0.01)
 env.make_as_global()
 
-# TrueSkill DB cache
-ratings_cache = {}
-
 # TrueSkill DB helper functions
 def delete_db(guildid):
     guildid = str(guildid)
     os.remove(f'{guildid}.db')
-    if guildid in ratings_cache:
-        del ratings_cache[guildid]
 
 def db_string(guildid):
     output = []
@@ -57,17 +52,6 @@ def get_skill(userid, guildid):
     userid = str(userid)
     guildid = str(guildid)
 
-    # check cache first
-    if guildid not in ratings_cache:
-            ratings_cache[guildid] = {}
-    if userid in ratings_cache[guildid]:
-        current_rating = ratings_cache[guildid][userid]
-        rating = ts.Rating(current_rating.mu, min(current_rating.sigma + get_decay(userid, guildid), ts.global_env().sigma))
-        print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
-        return rating
-    
-    print(f'Cache Miss: guildid = {guildid} userid = {userid}')
-
     # check db
     with shelve.open(str(guildid), writeback=True) as db:
         if 'ratings' not in db:
@@ -80,8 +64,6 @@ def get_skill(userid, guildid):
             print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
             return rating
         new_rating = ts.Rating()
-        # write to cache and db
-        ratings_cache[guildid][userid] = new_rating
         ratings[userid] = new_rating.mu, new_rating.sigma
     
     print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
@@ -100,10 +82,6 @@ def set_rating(userid, rating, guildid):
     start = time.time()
     userid = str(userid)
     guildid = str(guildid)
-    # write to cache
-    if guildid not in ratings_cache:
-        ratings_cache[guildid] = {}
-    ratings_cache[guildid][userid] = rating
     # write to shelve persistent db
     with shelve.open(str(guildid), writeback=True) as db:
         if 'ratings' not in db:
@@ -125,10 +103,8 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
             db['ratings'] = {}
         ratings = db['ratings']
         for uid in attackers:
-            ratings_cache[str(guildid)][str(uid)] = attackers_new[str(uid)]
             ratings[str(uid)] = attackers_new[str(uid)].mu, attackers_new[str(uid)].sigma
         for uid in defenders:
-            ratings_cache[str(guildid)][str(uid)] = defenders_new[str(uid)]
             ratings[str(uid)] = defenders_new[str(uid)].mu, defenders_new[str(uid)].sigma
         # record in match history
         if 'history' not in db:
