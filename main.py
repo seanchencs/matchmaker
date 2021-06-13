@@ -98,14 +98,11 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
         attackers_new, defenders_new = rate_with_round_score(attacker_ratings, defender_ratings, attacker_score, defender_score)
     else:
         defenders_new, attackers_new = rate_with_round_score(defender_ratings, attacker_ratings, defender_score, attacker_score)
+    for uid in attackers:
+        set_rating(str(uid), attackers_new[str(uid)], guildid)
+    for uid in defenders:
+        set_rating(str(uid), defenders_new[str(uid)], guildid)
     with shelve.open(str(guildid), writeback=True) as db:
-        if 'ratings' not in db:
-            db['ratings'] = {}
-        ratings = db['ratings']
-        for uid in attackers:
-            ratings[str(uid)] = attackers_new[str(uid)].mu, attackers_new[str(uid)].sigma
-        for uid in defenders:
-            ratings[str(uid)] = defenders_new[str(uid)].mu, defenders_new[str(uid)].sigma
         # record in match history
         if 'history' not in db:
             db['history'] = []
