@@ -106,8 +106,7 @@ def record_result(attackers, defenders, attacker_score, defender_score, guildid)
         # record in match history
         if 'history' not in db:
             db['history'] = []
-        history = db['history']
-        history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': attacker_score, 'defender_score': defender_score, 'time': datetime.now(), 'old_ratings': {**attacker_ratings, **defender_ratings}})
+        db['history'].append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': attacker_score, 'defender_score': defender_score, 'time': datetime.now(), 'old_ratings': {**attacker_ratings, **defender_ratings}})
     print(f'[{guildid}]: record_result in {round(1000*(time.time()-start), 2)}ms')
     return attacker_ratings, defender_ratings, attackers_new, defenders_new
 

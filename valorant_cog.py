@@ -302,7 +302,7 @@ class Valorant(commands.Cog):
             await ctx.send(f"**{guild_to_next_team_to_veto[ctx.guild.id].capitalize()}** turn to /veto")
             
 
-    @cog_ext.cog_slash(name='veto', description='veto a', guild_ids=GUILDS, options=[
+    @cog_ext.cog_slash(name='veto', description='veto a map', guild_ids=GUILDS, options=[
         create_option(
             name='choice',
             description='map to veto',
