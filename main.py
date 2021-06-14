@@ -192,7 +192,7 @@ def get_ranks(players, guildid):
     leaderboard = get_leaderboard_by_exposure(guildid)
     if leaderboard:
         ranks = [item[0] for item in get_leaderboard_by_exposure(guildid) if item[1] != ts.Rating()]
-        return {str(uid) : ranks.index(str(uid))+1 for uid in players}
+        return {str(uid) : ranks.index(str(uid))+1 for uid in players if uid in ranks}
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
