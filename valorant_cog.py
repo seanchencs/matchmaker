@@ -13,7 +13,7 @@ from pytz import timezone
 from tabulate import tabulate
 
 from main import (get_leaderboard, get_leaderboard_by_exposure,
-                  get_past_ratings, get_rating, get_win_loss, make_teams,
+                  get_past_ratings, get_ranks, get_rating, get_win_loss, make_teams,
                   record_result, set_rating)
 
 # local time zone
@@ -241,15 +241,41 @@ class Valorant(commands.Cog):
         if not guild_to_teams[ctx.guild.id]['attackers']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], winning_score, losing_score, ctx.guild.id)
+            attacker, defender = guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders']
+            ranks_old = get_ranks(attacker+defender, ctx.guild.id)
+            attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, winning_score, losing_score, ctx.guild.id)
+            ranks_new = get_ranks(attacker+defender, ctx.guild.id)
+
             output = []
-            output = '**Win for** ***Attackers*** **recorded.**\n'
-            output += f"\n**Attackers - {winning_score}:**\n"
-            for member in attackers:
-                output += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
-            output += f"\n\n**Defenders - {losing_score}:**\n"
-            for member in defenders:
-                output += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
+            output.append('**Win for Attackers Recorded**\n')
+            # charts
+            headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
+            attacker_chart = []
+            for attacker in attackers_new:
+                member = ctx.guild.get_member(int(attacker))
+                name = member.name
+                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                if ranks_old and attacker in ranks_old:
+                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                else:
+                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
+                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`Attackers - {winning_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+
+            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
+            defender_chart = []
+            for defender in defenders_new:
+                member = ctx.guild.get_member(int(defender))
+                name = member.name
+                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                if ranks_old and defender in ranks_old:
+                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                else:
+                    delta_rank = f'{ranks_new[defender]} (NEW!)'
+                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`Defenders - {losing_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
 
@@ -257,15 +283,41 @@ class Valorant(commands.Cog):
         if not guild_to_teams[ctx.guild.id]['defenders']:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            attackers, defenders, attackers_new, defenders_new = record_result(guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders'], losing_score, winning_score, ctx.guild.id)
+            attacker, defender = guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders']
+            ranks_old = get_ranks(attacker+defender, ctx.guild.id)
+            attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, losing_score, winning_score, ctx.guild.id)
+            ranks_new = get_ranks(attacker+defender, ctx.guild.id)
+
             output = []
-            output = '**Win for** ***Defenders*** **recorded.**\n'
-            output += f"\n**Attackers - {losing_score}:**\n"
-            for member in attackers:
-                output += f'\t<@!{member}> ({round(attackers[member].mu, 2)} -> {round(attackers_new[member].mu, 2)})\n'
-            output += f"\n\n**Defenders - {winning_score}:**\n"
-            for member in defenders:
-                output += f'\t<@!{member}> ({round(defenders[member].mu, 2)} -> {round(defenders_new[member].mu, 2)})\n'
+            output.append('**Win for Defenders Recorded.**\n')
+            # charts
+            headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
+            attacker_chart = []
+            for attacker in attackers_new:
+                member = ctx.guild.get_member(int(attacker))
+                name = member.name
+                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                if ranks_old and attacker in ranks_old:
+                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                else:
+                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
+                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`Attackers - {losing_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+
+            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
+            defender_chart = []
+            for defender in defenders_new:
+                member = ctx.guild.get_member(int(defender))
+                name = member.name
+                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                if ranks_old and defender in ranks_old:
+                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                else:
+                    delta_rank = f'{ranks_new[defender]} (NEW!)'
+                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`Defenders - {winning_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
     
