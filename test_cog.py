@@ -1,4 +1,5 @@
 import random
+import time
 
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
@@ -41,6 +42,7 @@ class Test(commands.Cog):
         825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
     })
     async def _test(self, ctx: SlashContext, game_type='1v1', count=5):
+        start_time = time.time()
         members = [member.id for member in ctx.guild.members]
         for _ in range(count):
             if game_type == '1v1':
@@ -53,6 +55,7 @@ class Test(commands.Cog):
             defender_score = random.randint(0, 11) if attacker_score == 13 else 13
             record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
         await ctx.send("✅")
+        print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
 
     @cog_ext.cog_slash(name='delete', guild_ids=GUILDS, description='delete the database for this server', permissions={
         825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
