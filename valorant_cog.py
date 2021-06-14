@@ -1,18 +1,20 @@
-from math import ceil
-import time
-from discord import guild
-from pytz import timezone
 import random
 import shelve
+import time
+from math import ceil
 
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
-from asciichartpy import plot
 import trueskill as ts
+from asciichartpy import plot
+from discord import guild
+from discord.ext import commands
+from discord_slash import SlashContext, cog_ext
+from discord_slash.utils.manage_commands import create_choice, create_option
+from pytz import timezone
 from tabulate import tabulate
 
-from main import get_leaderboard_by_exposure, get_past_ratings, get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
+from main import (get_leaderboard, get_leaderboard_by_exposure,
+                  get_past_ratings, get_rating, get_win_loss, make_teams,
+                  record_result, set_rating)
 
 # local time zone
 central = timezone('US/Central')
@@ -174,10 +176,10 @@ class Valorant(commands.Cog):
         output_string = f'Predicted Quality: {round(quality*10, 2)}\n'
         output_string += "\nAttackers:\n"
         for member in attackers:
-            output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
+            output_string += f'\t<@!{member}>({round(get_rating(member, ctx.guild.id).mu, 2)}) '
         output_string += "\n\nDefenders:\n"
         for member in defenders:
-            output_string += f'\t<@!{member}>({round(get_skill(member, ctx.guild.id).mu, 2)}) '
+            output_string += f'\t<@!{member}>({round(get_rating(member, ctx.guild.id).mu, 2)}) '
         # store teams
         guild_to_teams[ctx.guild.id]['attackers'] = attackers
         guild_to_teams[ctx.guild.id]['defenders'] = defenders
@@ -295,8 +297,8 @@ class Valorant(commands.Cog):
                 return
             guild_to_remaining_maps[ctx.guild.id] = VALORANT_MAP_POOL.copy()
             # next to veto
-            a_total = sum([get_skill(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id]['attackers']])
-            d_total = sum([get_skill(d, ctx.guild.id).mu for d in guild_to_teams[ctx.guild.id]['defenders']])
+            a_total = sum([get_rating(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id]['attackers']])
+            d_total = sum([get_rating(d, ctx.guild.id).mu for d in guild_to_teams[ctx.guild.id]['defenders']])
             if a_total > d_total:
                 guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
             else:
@@ -459,7 +461,7 @@ class Valorant(commands.Cog):
         )
     ])
     async def _rating(self, ctx: SlashContext, user):
-        skill = get_skill(user.id, ctx.guild.id)
+        skill = get_rating(user.id, ctx.guild.id)
         w, l = get_win_loss(user.id, ctx.guild.id)
         await ctx.send(f'\t<@!{user.id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}  ({w}W {l}L)\n')
 

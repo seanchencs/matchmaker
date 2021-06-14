@@ -2,8 +2,8 @@ import logging
 import os
 import random
 import shelve
-from datetime import datetime
 import time
+from datetime import datetime
 
 import discord
 import dotenv
@@ -46,7 +46,7 @@ def db_string(guildid):
             output.append(str(db[key]))
     return ' '.join(output)
 
-def get_skill(userid, guildid):
+def get_rating(userid, guildid):
     """Returns the TrueSkill rating of a discord user. Will initialize skill if none is found."""
     start = time.time()
     userid = str(userid)
@@ -92,8 +92,8 @@ def set_rating(userid, rating, guildid):
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
     """Updates the TrueSkill ratings given a result."""
     start = time.time()
-    attacker_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in attackers}
-    defender_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in defenders}
+    attacker_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in attackers}
+    defender_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in defenders}
     if attacker_score > defender_score:
         attackers_new, defenders_new = rate_with_round_score(attacker_ratings, defender_ratings, attacker_score, defender_score)
     else:
@@ -114,7 +114,7 @@ def make_teams(players, guildid, pool=10):
     """Make teams based on rating."""
     start = time.time()
     guildid = str(guildid)
-    player_ratings = {str(uid) : get_skill(str(uid), guildid) for uid in players}
+    player_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in players}
     team_a = team_b = []
     best_quality = 0.0
     for _ in range(pool):
@@ -128,7 +128,7 @@ def make_teams(players, guildid, pool=10):
             team_b = list(t2.keys())
             best_quality = quality
     # sort teams by rating
-    team_a, team_b = sorted(team_a, key=lambda x : get_skill(x, guildid)), sorted(team_b, key=lambda x : get_skill(x, guildid))
+    team_a, team_b = sorted(team_a, key=lambda x : get_rating(x, guildid)), sorted(team_b, key=lambda x : get_rating(x, guildid))
     print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
     return team_a, team_b, best_quality
 
@@ -183,7 +183,7 @@ def get_past_ratings(userid, guildid, pad=False):
                         past_ratings.append(past_ratings[-1])
                     else:
                         past_ratings.append(ts.global_env().mu)
-            past_ratings.append(get_skill(userid, guildid).mu)
+            past_ratings.append(get_rating(userid, guildid).mu)
     print(f'[{guildid}]: get_past_ratings for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return past_ratings
 
@@ -193,7 +193,7 @@ def get_leaderboard(guildid):
     guildid = str(guildid)
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
-            ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
+            ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
             print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
         print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
@@ -205,7 +205,7 @@ def get_leaderboard_by_exposure(guildid):
     guildid = str(guildid)
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
-            ratings = {str(id) : get_skill(str(id), guildid) for id in db['ratings'].keys()}
+            ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
             print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
         print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
