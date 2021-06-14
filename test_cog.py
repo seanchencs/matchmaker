@@ -58,6 +58,7 @@ class Test(commands.Cog):
             defender_score = random.randint(0, 11) if attacker_score == 13 else 13
             
             ranks_old = get_ranks(attacker+defender, ctx.guild.id)
+            print(ranks_old)
             attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
             headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
