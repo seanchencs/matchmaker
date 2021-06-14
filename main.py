@@ -188,8 +188,8 @@ def get_past_ratings(userid, guildid, pad=False):
     return past_ratings
 
 def get_ranks(players, guildid):
-    leaderboard = list(get_leaderboard_by_exposure(guildid).keys())
-    return {uid : leaderboard.index(uid) for uid in players}
+    leaderboard = [item[0] for item in get_leaderboard_by_exposure(guildid)]
+    return {str(uid) : leaderboard.index(str(uid)) for uid in players}
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
