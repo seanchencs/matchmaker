@@ -72,7 +72,7 @@ class Test(commands.Cog):
                     delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
-                attacker_chart += [name, delta_rating, delta_exposure, delta_rank]
+                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
             output.append(f"`\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
         await ctx.send(''.join(output))
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
