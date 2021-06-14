@@ -67,7 +67,7 @@ class Test(commands.Cog):
                 name = member.name
                 delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
                 delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
-                if attacker in ranks_old:
+                if ranks_old and attacker in ranks_old:
                     delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
