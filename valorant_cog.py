@@ -9,6 +9,8 @@ from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 from asciichartpy import plot
+import trueskill as ts
+from tabulate import tabulate
 
 from main import get_leaderboard_by_exposure, get_past_ratings, get_win_loss, set_rating, get_skill, record_result, make_teams, get_leaderboard
 
@@ -371,19 +373,20 @@ class Valorant(commands.Cog):
             await ctx.send('No Ranked Players.')
             return
         output = []
+        headers = ['Rank', 'Name', 'Rating', 'Exposure', 'Win/Loss']
         rank = 0
-        last = 0, 0, 0    # mu, sigma, rank
+        last = ts.Rating(0, 0), 0    # rating, rank
         for item in leaderboard:
             member = ctx.guild.get_member(int(item[0]))
             if member:
                 w, l = get_win_loss(item[0], ctx.guild.id)
                 rank += 1
-                if (item[1].mu, item[1].sigma) == last[:2]:
-                    output += f'**{last[2]}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
+                if (metric == 'exposure' and ts.expose(item[1]) == ts.expose(last[0])) or (metric == 'mean' and (item[1].mu, item[1].sigma) == (last[0].mu, last[0].sigma)):
+                    output.append([last[2], member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 else:
-                    output += f'**{rank}**. ***{member.name}*** - {round(item[1].mu, 4)} ± {round(item[1].sigma, 2)} ({w}W {l}L)\n'
+                    output.append(rank, member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 last = item[1].mu, item[1].sigma, rank
-        await ctx.send(''.join(output))
+        await ctx.send(tabulate(output, headers=headers, tablefmt='github'))
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
     async def _move(self, ctx: SlashContext):
