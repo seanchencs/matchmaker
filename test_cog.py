@@ -58,9 +58,9 @@ class Test(commands.Cog):
             defender_score = random.randint(0, 11) if attacker_score == 13 else 13
             
             ranks_old = get_ranks(attacker+defender, ctx.guild.id)
-            print(ranks_old)
             attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
+
             headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
             attacker_chart = []
             for attacker in attackers_new:
@@ -72,9 +72,22 @@ class Test(commands.Cog):
                     delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
-                print(attacker_chart)
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
             output.append(f"`\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+
+            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
+            defender_chart = []
+            for defender in defenders_new:
+                member = ctx.guild.get_member(int(defender))
+                name = member.name
+                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                if ranks_old and defender in ranks_old:
+                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                else:
+                    delta_rank = f'{ranks_new[defender]} (NEW!)'
+                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
         await ctx.send(''.join(output))
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
 
