@@ -1,4 +1,5 @@
 import logging
+from operator import le
 import os
 import random
 import shelve
@@ -188,8 +189,10 @@ def get_past_ratings(userid, guildid, pad=False):
     return past_ratings
 
 def get_ranks(players, guildid):
-    leaderboard = [item[0] for item in get_leaderboard_by_exposure(guildid)]
-    return {str(uid) : leaderboard.index(str(uid)) for uid in players}
+    leaderboard = get_leaderboard_by_exposure(guildid)
+    if leaderboard:
+        ranks = [item[0] for item in get_leaderboard_by_exposure(guildid)]
+        return {str(uid) : ranks.index(str(uid)) for uid in players}
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""

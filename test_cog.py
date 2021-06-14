@@ -64,7 +64,14 @@ class Test(commands.Cog):
             attacker_chart = []
             for attacker in attackers_new:
                 member = ctx.guild.get_member(int(attacker))
-                attacker_chart += [member.name, f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}', f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}', f'{ranks_old[attacker]}->{ranks_new[attacker]}']
+                name = member.name
+                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
+                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                if attacker in ranks_old:
+                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                else:
+                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
+                attacker_chart += [name, delta_rating, delta_exposure, delta_rank]
             output.append(f"`\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
         await ctx.send(''.join(output))
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
