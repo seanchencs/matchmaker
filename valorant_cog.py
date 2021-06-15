@@ -519,6 +519,7 @@ class Valorant(commands.Cog):
         headers = ['Name', 'Rank', 'Rating', 'Exposure', 'Win/Loss']
         rating_chart = []
         for p in players:
+            p = str(p)
             member = ctx.guild.get_member(int(p))
             name = member.name
             rank = get_ranks((p,), ctx.guild.id)[p]
