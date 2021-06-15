@@ -172,13 +172,13 @@ class Valorant(commands.Cog):
         # create teams
         attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
         # create output
-        output_string = f'Predicted Quality: {round(quality*10, 2)}\n'
+        output_string = f'Predicted Quality: {quality*10: .2f}\n'
         output_string += "\nAttackers:\n"
         for member in attackers:
-            output_string += f'\t<@!{member}>({round(get_rating(member, ctx.guild.id).mu, 2)}) '
+            output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '
         output_string += "\n\nDefenders:\n"
         for member in defenders:
-            output_string += f'\t<@!{member}>({round(get_rating(member, ctx.guild.id).mu, 2)}) '
+            output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '
         # store teams
         guild_to_teams[ctx.guild.id]['attackers'] = attackers
         guild_to_teams[ctx.guild.id]['defenders'] = defenders
@@ -253,8 +253,8 @@ class Valorant(commands.Cog):
             for attacker in attackers_new:
                 member = ctx.guild.get_member(int(attacker))
                 name = member.name
-                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                delta_rating = f'{attackers_old[attacker].mu: .2f}->{attackers_new[attacker].mu: .2f}'
+                delta_exposure = f'{ts.expose(attackers_old[attacker]): .2f}->{ts.expose(attackers_new[attacker]): .2f}'
                 if ranks_old and attacker in ranks_old:
                     delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
                 else:
@@ -267,8 +267,8 @@ class Valorant(commands.Cog):
             for defender in defenders_new:
                 member = ctx.guild.get_member(int(defender))
                 name = member.name
-                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                delta_rating = f'{defenders_old[defender].mu: .2f}->{defenders_new[defender].mu: .2f}'
+                delta_exposure = f'{ts.expose(defenders_old[defender]): .2f}->{ts.expose(defenders_new[defender]): .2f}'
                 if ranks_old and defender in ranks_old:
                     delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
                 else:
@@ -295,8 +295,8 @@ class Valorant(commands.Cog):
             for attacker in attackers_new:
                 member = ctx.guild.get_member(int(attacker))
                 name = member.name
-                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                delta_rating = f'{attackers_old[attacker].mu: .2f}->{attackers_new[attacker].mu: .2f}'
+                delta_exposure = f'{ts.expose(attackers_old[attacker]): .2f}->{ts.expose(attackers_new[attacker]): .2f}'
                 if ranks_old and attacker in ranks_old:
                     delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
                 else:
@@ -309,8 +309,8 @@ class Valorant(commands.Cog):
             for defender in defenders_new:
                 member = ctx.guild.get_member(int(defender))
                 name = member.name
-                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                delta_rating = f'{defenders_old[defender].mu: .2f}->{defenders_new[defender].mu: .2f}'
+                delta_exposure = f'{ts.expose(defenders_old[defender]): .2f}->{ts.expose(defenders_new[defender]): .2f}'
                 if ranks_old and defender in ranks_old:
                     delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
                 else:
@@ -435,9 +435,9 @@ class Valorant(commands.Cog):
                 w, l = get_win_loss(item[0], ctx.guild.id)
                 rank += 1
                 if last[0] and ((metric == 'exposure' and isclose(ts.expose(item[1]), ts.expose(last[0]))) or (metric == 'mean' and isclose(item[1], last[0]))):
-                    output.append([last[1], member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
+                    output.append([last[1], member.name, f'{item[1].mu, 4: .4f} ± {item[1].sigma, 2: .4f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 else:
-                    output.append([rank, member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
+                    output.append([rank, member.name, f'{item[1].mu, 4: .4f} ± {item[1].sigma, 2: .4f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 last = item[1], rank
         await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
 
@@ -514,7 +514,7 @@ class Valorant(commands.Cog):
     async def _rating(self, ctx: SlashContext, user):
         skill = get_rating(user.id, ctx.guild.id)
         w, l = get_win_loss(user.id, ctx.guild.id)
-        await ctx.send(f'\t<@!{user.id}> - {round(skill.mu, 4)} ± {round(skill.sigma, 2)}  ({w}W {l}L)\n')
+        await ctx.send(f'\t<@!{user.id}> - {skill.mu: .4f} ± {skill.sigma: 2f}  ({w}W {l}L)\n')
 
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
     async def _undo(self, ctx: SlashContext):
@@ -583,9 +583,9 @@ class Valorant(commands.Cog):
                     output.append(f" { match['attacker_score']} - {match['defender_score']} ")
                     output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
                     if userid in match['attackers']:
-                        output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['attackers'][userid].mu, 2)})`\n")
+                        output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['attackers'][userid].mu: .2f})`\n")
                     else:
-                        output.append(f" ({round(match['old_ratings'][userid].mu, 2)} -> {round(match['defenders'][userid].mu, 2)})`\n")
+                        output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['defenders'][userid].mu: .2f})`\n")
                 if len(history) > 10:
                     output.append(f"`... and {len(history)-10} more`")
             else:
