@@ -503,18 +503,22 @@ class Valorant(commands.Cog):
                         await ctx.send('✅')
 
 
-    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified user', options=[
-        create_option(
-            name='user',
-            description='user to find rating for',
-            option_type=6,
-            required=True
-        )
-    ])
-    async def _rating(self, ctx: SlashContext, user):
-        skill = get_rating(user.id, ctx.guild.id)
-        w, l = get_win_loss(user.id, ctx.guild.id)
-        await ctx.send(f'\t<@!{user.id}> - {skill.mu: .4f} ± {skill.sigma: .2f}  ({w}W {l}L)\n')
+    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified player(s)')
+    async def _rating(self, ctx: SlashContext):
+        players = ctx.message.raw_mentions()
+        if not players:
+            players = [ctx.author.id]
+        headers = ['Name', 'Rank', 'Rating', 'Exposure', 'Win/Loss']
+        rating_chart = []
+        for player in players:
+            member = ctx.guild.get_member(int(player))
+            name = member.name
+            rank = get_ranks((player,), ctx.guild.id)[player]
+            rating = get_rating(player, ctx.guild.id)
+            exposure = ts.expose(rating)
+            w, l = get_win_loss(player, ctx.guild.id)
+            rating_chart.append([name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
+        await ctx.send(f"`\n{tabulate(rating_chart, headers=headers, tablefmt='psql')}\n`")
 
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
     async def _undo(self, ctx: SlashContext):
