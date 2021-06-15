@@ -515,7 +515,7 @@ class Valorant(commands.Cog):
         if not player:
             players = [ctx.author.id]
         else:
-            players = [player]
+            players = [player.id]
         headers = ['Name', 'Rank', 'Rating', 'Exposure', 'Win/Loss']
         rating_chart = []
         for p in players:
