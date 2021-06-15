@@ -435,7 +435,7 @@ class Valorant(commands.Cog):
                 w, l = get_win_loss(item[0], ctx.guild.id)
                 rank += 1
                 if last[0] and ((metric == 'exposure' and isclose(ts.expose(item[1]), ts.expose(last[0]))) or (metric == 'mean' and isclose(item[1], last[0]))):
-                    output.append([last[2], member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
+                    output.append([last[1], member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 else:
                     output.append([rank, member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 last = item[1], rank
