@@ -505,6 +505,7 @@ class Valorant(commands.Cog):
 
     @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified player(s)')
     async def _rating(self, ctx: SlashContext):
+        print(ctx.message, ctx.args, ctx.kwargs, ctx.name)
         players = ctx.message.raw_mentions()
         if not players:
             players = [ctx.author.id]
