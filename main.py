@@ -187,11 +187,26 @@ def get_past_ratings(userid, guildid, pad=False):
     print(f'[{guildid}]: get_past_ratings for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return past_ratings
 
-def get_ranks(players, guildid):
-    leaderboard = get_leaderboard_by_exposure(guildid)
+def get_ranks(players, guildid, metric='exposure'):
+    """Get the leaderboard position of a list of players. Returns a {userid: position} dict."""
+    if metric == 'exposure':
+        leaderboard = get_leaderboard_by_exposure(guildid)
+    elif metric == 'mean':
+        leaderboard = get_leaderboard(guildid)
     if leaderboard:
-        ranks = [item[0] for item in get_leaderboard_by_exposure(guildid) if item[1] != ts.Rating()]
-        return {str(uid) : ranks.index(str(uid))+1 for uid in players if uid in ranks}
+        rank = 0
+        last = 0
+        output = {}
+        for item in leaderboard:
+            if metric == 'exposure' and ts.expose(item[1]) != last:
+                rank += 1
+                last = ts.expose(item[1])
+            elif metric == 'mean' and item[1].mu == last:
+                rank += 1
+                last = item[1].mu
+            if item[0] in players:
+                output[item[0]] = rank
+        return output
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
