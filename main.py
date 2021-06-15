@@ -1,5 +1,4 @@
 import logging
-from operator import le
 import os
 import random
 import shelve
@@ -66,7 +65,7 @@ def get_rating(userid, guildid):
             return rating
         new_rating = ts.Rating()
         ratings[userid] = new_rating.mu, new_rating.sigma
-    
+
     print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
     return new_rating
 

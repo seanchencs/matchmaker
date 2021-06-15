@@ -5,7 +5,6 @@ from math import ceil
 
 import trueskill as ts
 from asciichartpy import plot
-from discord import guild
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
 from discord_slash.utils.manage_commands import create_choice, create_option
@@ -13,8 +12,8 @@ from pytz import timezone
 from tabulate import tabulate
 
 from main import (get_leaderboard, get_leaderboard_by_exposure,
-                  get_past_ratings, get_ranks, get_rating, get_win_loss, make_teams,
-                  record_result, set_rating)
+                  get_past_ratings, get_ranks, get_rating, get_win_loss,
+                  make_teams, record_result, set_rating)
 
 # local time zone
 central = timezone('US/Central')
@@ -72,10 +71,10 @@ class Valorant(commands.Cog):
         """Clean up created voice channels if they're empty."""
         if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != 'valorant':
             return
-        guild = before.channel.guild
+        prev_guild = before.channel.guild
         t_vc = ct_vc = None
         # find channels
-        for vc in guild.voice_channels:
+        for vc in prev_guild.voice_channels:
             if vc.category == None or vc.category.name.lower() != 'valorant':
                 continue
             if vc.name.lower() == 'attackers':
@@ -87,7 +86,7 @@ class Valorant(commands.Cog):
             if len(t_vc.members) == len(ct_vc.members) == 0:
                 await t_vc.delete()
                 await ct_vc.delete()
-                for category in guild.categories:
+                for category in prev_guild.categories:
                     if category.name.lower() == 'valorant':
                         await category.delete()
 
@@ -320,7 +319,7 @@ class Valorant(commands.Cog):
             output.append(f"`Defenders - {winning_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
-    
+
     @cog_ext.cog_slash(name='map', description='choose a map randomly or through vetos', guild_ids=GUILDS, options=[
         create_option(
             name='method',
@@ -345,7 +344,7 @@ class Valorant(commands.Cog):
             await ctx.send(f'**MAP: {map}**')
         elif method == 'veto':
             if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
-                await ctx.send(f'use /make before veto')
+                await ctx.send('use /make before veto')
                 return
             guild_to_remaining_maps[ctx.guild.id] = VALORANT_MAP_POOL.copy()
             # next to veto
@@ -447,19 +446,19 @@ class Valorant(commands.Cog):
         if ctx.guild.id not in guild_to_teams:
             await ctx.send("Use /start to begin matchmaking.")
             return
-        guild = ctx.guild
+        gd = ctx.guild
         # find attacker and defender voice channels
         attacker_channel, defender_channel = None, None
         # check if Valorant channel category exists
         valorant_category = None
-        for category in guild.categories:
+        for category in gd.categories:
             if category.name.lower() == 'valorant':
                 valorant_category = category
         if valorant_category is None:
             # make it
-            valorant_category = await guild.create_category_channel('VALORANT')
+            valorant_category = await gd.create_category_channel('VALORANT')
             # await ctx.send("VALORANT category created.")
-        for vc in guild.voice_channels:
+        for vc in gd.voice_channels:
             # ignore voice channels outside of VALORANT
             if vc.category != valorant_category:
                 continue
@@ -469,20 +468,20 @@ class Valorant(commands.Cog):
                 defender_channel = vc
         # create vc if necessary
         if attacker_channel is None:
-            attacker_channel = await guild.create_voice_channel('Attackers', category=valorant_category)
+            attacker_channel = await gd.create_voice_channel('Attackers', category=valorant_category)
         if defender_channel is None:
-            defender_channel = await guild.create_voice_channel('Defenders', category=valorant_category)
+            defender_channel = await gd.create_voice_channel('Defenders', category=valorant_category)
         # move members to right channel
-        attackers = guild_to_teams[guild.id]['attackers']
-        defenders = guild_to_teams[guild.id]['defenders']
+        attackers = guild_to_teams[gd.id]['attackers']
+        defenders = guild_to_teams[gd.id]['defenders']
         count = 0
         for attacker in attackers:
-            member = guild.get_member(attacker)
+            member = gd.get_member(attacker)
             if member.voice is not None:
                 count += 1
                 await member.move_to(attacker_channel)
         for defender in defenders:
-            member = guild.get_member(defender)
+            member = gd.get_member(defender)
             if member.voice is not None:
                 count += 1
                 await member.move_to(defender_channel)

@@ -2,13 +2,14 @@ import random
 import time
 
 import trueskill as ts
-from tabulate import tabulate
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
 from discord_slash.model import SlashCommandPermissionType
 from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
-from main import delete_db, get_leaderboard_by_exposure, get_ranks, record_result, set_rating
+from tabulate import tabulate
+
+from main import delete_db, get_ranks, record_result
 
 GUILDS = [825900837083676732, 813149413782061057]
 
@@ -56,7 +57,7 @@ class Test(commands.Cog):
                 attacker, defender = [players[0], players[1]], [players[2], players[3]]
             attacker_score = random.choice((13, random.randint(0, 11)))
             defender_score = random.randint(0, 11) if attacker_score == 13 else 13
-            
+
             ranks_old = get_ranks(attacker+defender, ctx.guild.id)
             attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
