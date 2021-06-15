@@ -10,7 +10,7 @@ from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
 from main import delete_db, get_leaderboard_by_exposure, get_ranks, record_result, set_rating
 
-GUILDS = [825900837083676732]
+GUILDS = [825900837083676732, 813149413782061057]
 
 class Test(commands.Cog):
     def __init__(self, bot):

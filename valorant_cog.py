@@ -21,7 +21,7 @@ central = timezone('US/Central')
 time_format = '%a %b %-d %-I:%M %p'
 
 # global discord id lists
-GUILDS = [825900837083676732]
+GUILDS = [825900837083676732, 813149413782061057]
 ADMINS = [335828416412778496, 263745246821744640]
 
 # VALORANT MAPS
