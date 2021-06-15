@@ -247,7 +247,7 @@ class Valorant(commands.Cog):
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
 
             output = []
-            output.append('**Win for Attackers Recorded**\n')
+            output.append('**Win for Attackers Recorded.**\n')
             # charts
             headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
             attacker_chart = []
@@ -261,7 +261,7 @@ class Valorant(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {winning_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Attackers - {winning_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n\n")
 
             headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
             defender_chart = []
@@ -303,7 +303,7 @@ class Valorant(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {losing_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Attackers - {losing_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n\n")
 
             headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
             defender_chart = []

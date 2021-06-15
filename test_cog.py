@@ -46,7 +46,7 @@ class Test(commands.Cog):
     async def _test(self, ctx: SlashContext, game_type='1v1', count=5):
         start_time = time.time()
         output = []
-        members = [member.id for member in ctx.guild.members]
+        members = [str(member.id) for member in ctx.guild.members]
         for _ in range(count):
             if game_type == '1v1':
                 players = random.sample(members, 2)
@@ -73,7 +73,7 @@ class Test(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Attackers:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
 
             headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
             defender_chart = []
@@ -87,7 +87,7 @@ class Test(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[defender]} (NEW!)'
                 defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Defenders:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
         await ctx.send(''.join(output))
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
 
