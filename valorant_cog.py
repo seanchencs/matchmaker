@@ -440,7 +440,7 @@ class Valorant(commands.Cog):
                 else:
                     output.append([rank, member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 last = item[1], rank
-        await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql')}`")
+        await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
     async def _move(self, ctx: SlashContext):
