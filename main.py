@@ -196,16 +196,19 @@ def get_ranks(players, guildid, metric='exposure'):
     if leaderboard:
         rank = 0
         last = 0
+        last_rank = 0
         output = {}
         for item in leaderboard:
+            rank += 1
             if metric == 'exposure' and ts.expose(item[1]) != last:
-                rank += 1
+                print(last, ts.expose(item[1]))
                 last = ts.expose(item[1])
+                last_rank = rank
             elif metric == 'mean' and item[1].mu == last:
-                rank += 1
                 last = item[1].mu
+                last_rank = rank
             if item[0] in players:
-                output[item[0]] = rank
+                output[item[0]] = last_rank
         return output
 
 def get_leaderboard(guildid):
