@@ -503,21 +503,28 @@ class Valorant(commands.Cog):
                         await ctx.send('✅')
 
 
-    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified player(s)')
-    async def _rating(self, ctx: SlashContext):
-        print(ctx.message, ctx.args, ctx.kwargs, ctx.name)
-        players = ctx.message.raw_mentions()
-        if not players:
+    @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified player', options=[
+        create_option(
+            name='player',
+            description='player to find rating for',
+            option_type=6,
+            required=False
+        )
+    ])
+    async def _rating(self, ctx: SlashContext, player=None):
+        if not player:
             players = [ctx.author.id]
+        else:
+            players = [player]
         headers = ['Name', 'Rank', 'Rating', 'Exposure', 'Win/Loss']
         rating_chart = []
-        for player in players:
-            member = ctx.guild.get_member(int(player))
+        for p in players:
+            member = ctx.guild.get_member(int(p))
             name = member.name
-            rank = get_ranks((player,), ctx.guild.id)[player]
-            rating = get_rating(player, ctx.guild.id)
+            rank = get_ranks((p,), ctx.guild.id)[p]
+            rating = get_rating(p, ctx.guild.id)
             exposure = ts.expose(rating)
-            w, l = get_win_loss(player, ctx.guild.id)
+            w, l = get_win_loss(p, ctx.guild.id)
             rating_chart.append([name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
         await ctx.send(f"`\n{tabulate(rating_chart, headers=headers, tablefmt='psql')}\n`")
 
