@@ -247,7 +247,7 @@ class Valorant(commands.Cog):
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
 
             output = []
-            output.append('**Win for Attackers Recorded.**\n')
+            output.append('**Win for Attackers Recorded.**\n\n')
             # charts
             headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
             attacker_chart = []
@@ -289,7 +289,7 @@ class Valorant(commands.Cog):
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
 
             output = []
-            output.append('**Win for Defenders Recorded.**\n')
+            output.append('**Win for Defenders Recorded.**\n\n')
             # charts
             headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             attacker_chart = []
