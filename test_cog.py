@@ -61,7 +61,7 @@ class Test(commands.Cog):
             attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
 
-            headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             attacker_chart = []
             for attacker in attackers_new:
                 member = ctx.guild.get_member(int(attacker))
@@ -73,9 +73,9 @@ class Test(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[attacker]} (NEW!)'
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Attackers - {attacker_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
 
-            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = ['Defender', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             defender_chart = []
             for defender in defenders_new:
                 member = ctx.guild.get_member(int(defender))
@@ -87,7 +87,7 @@ class Test(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[defender]} (NEW!)'
                 defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Defenders:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
+            output.append(f"`Defenders - {defender_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
             await ctx.send(''.join(output))
             output = []
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')

@@ -291,7 +291,7 @@ class Valorant(commands.Cog):
             output = []
             output.append('**Win for Defenders Recorded.**\n')
             # charts
-            headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             attacker_chart = []
             for attacker in attackers_new:
                 member = ctx.guild.get_member(int(attacker))
@@ -305,7 +305,7 @@ class Valorant(commands.Cog):
                 attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
             output.append(f"`Attackers - {losing_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = ['Defender', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             defender_chart = []
             for defender in defenders_new:
                 member = ctx.guild.get_member(int(defender))
