@@ -1,4 +1,5 @@
 import logging
+from math import isclose
 import os
 import random
 import shelve
@@ -200,11 +201,10 @@ def get_ranks(players, guildid, metric='exposure'):
         output = {}
         for item in leaderboard:
             rank += 1
-            if metric == 'exposure' and ts.expose(item[1]) != last:
-                print(last, ts.expose(item[1]))
+            if metric == 'exposure' and not isclose(ts.expose(item[1]), last):
                 last = ts.expose(item[1])
                 last_rank = rank
-            elif metric == 'mean' and item[1].mu == last:
+            elif metric == 'mean' and not isclose(item[1].mu, last):
                 last = item[1].mu
                 last_rank = rank
             if item[0] in players:

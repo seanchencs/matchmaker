@@ -1,7 +1,7 @@
 import random
 import shelve
 import time
-from math import ceil
+from math import ceil, isclose
 
 import trueskill as ts
 from asciichartpy import plot
@@ -434,11 +434,9 @@ class Valorant(commands.Cog):
             if member:
                 w, l = get_win_loss(item[0], ctx.guild.id)
                 rank += 1
-                if last[0] and ((metric == 'exposure' and ts.expose(item[1]) == ts.expose(last[0])) or (metric == 'mean' and item[1] == last[0])):
+                if last[0] and ((metric == 'exposure' and isclose(ts.expose(item[1]), ts.expose(last[0]))) or (metric == 'mean' and isclose(item[1], last[0]))):
                     output.append([last[2], member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 else:
-                    if last[0]:
-                        print(ts.expose(item[1]), ts.expose(last[0]))
                     output.append([rank, member.name, f'{round(item[1].mu, 4)} ± {round(item[1].sigma, 2)}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 last = item[1], rank
         await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
