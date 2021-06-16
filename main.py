@@ -219,8 +219,10 @@ def get_leaderboard(guildid):
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
+            ratings = {id : ratings[id] for id in ratings if ratings[id] != ts.Rating()}
+            leaderboard = sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
             print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
-            return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
+            return leaderboard
     print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
     return None
 
@@ -231,8 +233,10 @@ def get_leaderboard_by_exposure(guildid):
     with shelve.open(str(guildid)) as db:
         if 'ratings' in db:
             ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
+            ratings = {id : ratings[id] for id in ratings if ratings[id] != ts.Rating()}
+            leaderboard = sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
             print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
-            return sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
+            return leaderboard
     print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
     return None
 
