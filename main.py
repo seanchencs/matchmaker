@@ -88,6 +88,7 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
+    print(rating, get_rating(userid, guildid))
     print(f'[{guildid}]: set_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
