@@ -40,13 +40,18 @@ class Test(commands.Cog):
             description='# of results to generate',
             option_type=4,
             required=False,
+        ),
+        create_option(
+            name='output',
+            description='show output for each match',
+            option_type=5,
+            required=False
         )
     ], permissions={
         825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
     })
-    async def _test(self, ctx: SlashContext, game_type='1v1', count=5):
+    async def _test(self, ctx: SlashContext, game_type='1v1', count=5, show_output=False):
         start_time = time.time()
-        output = []
         members = [str(member.id) for member in ctx.guild.members]
         for _ in range(count):
             if game_type == '1v1':
@@ -62,35 +67,38 @@ class Test(commands.Cog):
             attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, attacker_score, defender_score, ctx.guild.id)
             ranks_new = get_ranks(attacker+defender, ctx.guild.id)
 
-            headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
-            attacker_chart = []
-            for attacker in attackers_new:
-                member = ctx.guild.get_member(int(attacker))
-                name = member.name
-                delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
-                if ranks_old and attacker in ranks_old:
-                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
-                else:
-                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
-                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {attacker_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
+            if show_output:
+                output = []
+                headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+                attacker_chart = []
+                for attacker in attackers_new:
+                    member = ctx.guild.get_member(int(attacker))
+                    name = member.name
+                    delta_rating = f'{round(attackers_old[attacker].mu, 2)}->{round(attackers_new[attacker].mu, 2)}'
+                    delta_exposure = f'{round(ts.expose(attackers_old[attacker]), 2)}->{round(ts.expose(attackers_new[attacker]), 2)}'
+                    if ranks_old and attacker in ranks_old:
+                        delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                    else:
+                        delta_rank = f'{ranks_new[attacker]} (NEW!)'
+                    attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
+                output.append(f"`Attackers - {attacker_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n")
 
-            headers = ['Defender', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
-            defender_chart = []
-            for defender in defenders_new:
-                member = ctx.guild.get_member(int(defender))
-                name = member.name
-                delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
-                delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
-                if ranks_old and defender in ranks_old:
-                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
-                else:
-                    delta_rank = f'{ranks_new[defender]} (NEW!)'
-                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Defenders - {defender_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
-            await ctx.send(''.join(output))
-            output = []
+                headers = ['Defender', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+                defender_chart = []
+                for defender in defenders_new:
+                    member = ctx.guild.get_member(int(defender))
+                    name = member.name
+                    delta_rating = f'{round(defenders_old[defender].mu, 2)}->{round(defenders_new[defender].mu, 2)}'
+                    delta_exposure = f'{round(ts.expose(defenders_old[defender]), 2)}->{round(ts.expose(defenders_new[defender]), 2)}'
+                    if ranks_old and defender in ranks_old:
+                        delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                    else:
+                        delta_rank = f'{ranks_new[defender]} (NEW!)'
+                    defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
+                output.append(f"`Defenders - {defender_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
+                await ctx.send(''.join(output))
+                output = []
+        await ctx.send('✅')
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
 
     @cog_ext.cog_slash(name='delete', guild_ids=GUILDS, description='delete the database for this server', permissions={

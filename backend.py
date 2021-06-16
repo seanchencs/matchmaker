@@ -1,7 +1,6 @@
 
 import os
 import random
-import shelve
 import time
 from datetime import datetime
 from math import isclose
@@ -70,7 +69,6 @@ def set_rating(userid, rating, guildid):
         ratings[userid] = rating.mu, rating.sigma
         db['ratings'] = ratings
         db.commit()
-        print(rating, db['ratings'][userid])
     print(f'[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
@@ -230,15 +228,17 @@ def get_leaderboard_by_exposure(guildid):
 
 def undo_last_match(guildid):
     """Rollback to before the last recorded result."""
-    start = time.time()
     guildid = str(guildid)
     match = None
     with SqliteDict(guildid+'.db') as db:
         if 'history' not in db or not db['history']:
+            print('history not found in db')
             return None
-        match = db['history'][-1]
+        history = db['history']
+        match = history[-1]
         # delete from match history
-        del db['history'][-1]
+        del history[-1]
+        db['history'] = history
         db.commit()
     for player in match['attackers']:
         set_rating(str(player), match['old_ratings'][player], guildid)

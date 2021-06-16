@@ -1,5 +1,4 @@
 import random
-import shelve
 import time
 from math import ceil, isclose
 from sqlitedict import SqliteDict
@@ -14,7 +13,7 @@ from tabulate import tabulate
 
 from backend import (get_leaderboard, get_leaderboard_by_exposure,
                   get_past_ratings, get_ranks, get_rating, get_win_loss,
-                  make_teams, record_result, set_rating, undo_last_match)
+                  make_teams, record_result, undo_last_match)
 
 # local time zone
 central = timezone('US/Central')
@@ -536,6 +535,7 @@ class Valorant(commands.Cog):
         match = undo_last_match(ctx.guild.id)
         if not match:
             await ctx.send('Error undoing match.')
+            return
         # reset the record cooldown
         if ctx.guild.id in guild_to_last_result_time:
             del guild_to_last_result_time[ctx.guild.id]
