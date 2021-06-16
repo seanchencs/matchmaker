@@ -241,7 +241,7 @@ def undo_last_match(guildid):
     start = time.time()
     guildid = str(guildid)
     match = None
-    with shelve.open(guildid) as db:
+    with shelve.open(guildid, writeback=True) as db:
         if 'history' not in db or not db['history']:
             return False
         match = db['history'][-1]
@@ -249,11 +249,8 @@ def undo_last_match(guildid):
         del db['history'][-1]
     for player in match['attackers']:
         set_rating(str(player), match['old_ratings'][player], guildid)
-        print(get_rating(player, guildid))
     for player in match['defenders']:
         set_rating(str(player), match['old_ratings'][player], guildid)
-        print(get_rating(player, guildid))
-    print('920834u9iqjfs')
     return True
 
 
