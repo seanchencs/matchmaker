@@ -89,7 +89,7 @@ def set_rating(userid, rating, guildid):
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
     print(rating, get_rating(userid, guildid))
-    print(f'[{guildid}]: set_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
+    print(f'[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
     """Updates the TrueSkill ratings given a result."""
@@ -253,7 +253,8 @@ def undo_last_match(guildid):
     for player in match['defenders']:
         print(str(player), match['old_ratings'][player], guildid)
         set_rating(str(player), match['old_ratings'][player], guildid)
-    
+    for player in match['attackers'] + match['defenders']:
+        print(get_rating(player, guildid))
     return True
 
 
