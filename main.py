@@ -253,7 +253,7 @@ def undo_last_match(guildid):
     for player in match['defenders']:
         set_rating(str(player), match['old_ratings'][player], guildid)
         print(get_rating(player, guildid))
-        
+    print('920834u9iqjfs')
     return True
 
 

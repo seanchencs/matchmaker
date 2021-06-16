@@ -13,7 +13,7 @@ from tabulate import tabulate
 
 from main import (get_leaderboard, get_leaderboard_by_exposure,
                   get_past_ratings, get_ranks, get_rating, get_win_loss,
-                  make_teams, record_result, set_rating)
+                  make_teams, record_result, set_rating, undo_last_match)
 
 # local time zone
 central = timezone('US/Central')
@@ -532,19 +532,8 @@ class Valorant(commands.Cog):
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
     async def _undo(self, ctx: SlashContext):
         # reset the ratings
-        with shelve.open(str(ctx.guild.id), writeback=True) as db:
-            if 'history' not in db or not db['history']:
-                await ctx.send('No recorded matches.')
-                return
-            match = db['history'][-1]
-            for player in match['attackers']:
-                print(str(player), match['old_ratings'][player], ctx.guild.id)
-                set_rating(str(player), match['old_ratings'][player], ctx.guild.id)
-            for player in match['defenders']:
-                print(str(player), match['old_ratings'][player], ctx.guild.id)
-                set_rating(str(player), match['old_ratings'][player], ctx.guild.id)
-            # delete from match history
-            del db['history'][-1]
+        if not undo_last_match(ctx.guild.id):
+            await ctx.send('Error undoing match.')
         # reset the record cooldown
         if ctx.guild.id in guild_to_last_result_time:
             del guild_to_last_result_time[ctx.guild.id]
