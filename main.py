@@ -84,7 +84,7 @@ def set_rating(userid, rating, guildid):
     userid = str(userid)
     guildid = str(guildid)
     # write to shelve persistent db
-    with shelve.open(str(guildid), writeback=True) as db:
+    with shelve.open(str(guildid)) as db:
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
