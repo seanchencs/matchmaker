@@ -172,7 +172,7 @@ class Valorant(commands.Cog):
         # create teams
         attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
         # create output
-        output_string = f'Predicted Quality: {quality*10: .2f}\n'
+        output_string = f'Predicted Quality: {quality*100: .2f}%\n'
         output_string += "\nAttackers:\n"
         for member in attackers:
             output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '

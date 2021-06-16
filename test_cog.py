@@ -98,9 +98,9 @@ class Test(commands.Cog):
                 output.append(f"`Defenders - {defender_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
                 await ctx.send(''.join(output))
                 output = []
-        await ctx.send('✅')
         print(f'[{ctx.guild.id}]: {count} {game_type} games created in {round(time.time()-start_time, 4)}s')
-
+        await ctx.send('✅')
+        
     @cog_ext.cog_slash(name='delete', guild_ids=GUILDS, description='delete the database for this server', permissions={
         825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
     })
