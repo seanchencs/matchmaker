@@ -2,6 +2,7 @@ import random
 import shelve
 import time
 from math import ceil, isclose
+from sqlitedict import SqliteDict
 
 import trueskill as ts
 from asciichartpy import plot
@@ -11,7 +12,7 @@ from discord_slash.utils.manage_commands import create_choice, create_option
 from pytz import timezone
 from tabulate import tabulate
 
-from main import (get_leaderboard, get_leaderboard_by_exposure,
+from backend import (get_leaderboard, get_leaderboard_by_exposure,
                   get_past_ratings, get_ranks, get_rating, get_win_loss,
                   make_teams, record_result, set_rating, undo_last_match)
 
@@ -551,7 +552,7 @@ class Valorant(commands.Cog):
     )
     async def _history(self, ctx: SlashContext, user=None):
         output = []
-        with shelve.open(str(ctx.guild.id)) as db:
+        with SqliteDict(str(ctx.guild.id)+'.db') as db:
             if 'history' not in db or not db['history']:
                 await ctx.send('No recorded matches.')
                 return

@@ -9,7 +9,7 @@ from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
 from tabulate import tabulate
 
-from main import delete_db, get_ranks, record_result
+from backend import delete_db, get_ranks, record_result
 
 GUILDS = [825900837083676732, 813149413782061057]
 
