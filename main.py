@@ -220,8 +220,8 @@ def get_leaderboard(guildid):
             ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
             print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True)
-        print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
-        return None
+    print(f'[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms')
+    return None
 
 def get_leaderboard_by_exposure(guildid):
     """Get leaderboard sorted by exposure (see trueskill.org for more info)."""
@@ -232,8 +232,29 @@ def get_leaderboard_by_exposure(guildid):
             ratings = {str(id) : get_rating(str(id), guildid) for id in db['ratings'].keys()}
             print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
             return sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
-        print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
-        return None
+    print(f'[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms')
+    return None
+
+def undo_last_match(guildid):
+    """Rollback to before the last recorded result."""
+    start = time.time()
+    guildid = str(guildid)
+    match = None
+    with shelve.open(guildid) as db:
+        if 'history' not in db or not db['history']:
+            return False
+        match = db['history'][-1]
+        # delete from match history
+        del db['history'][-1]
+    for player in match['attackers']:
+        print(str(player), match['old_ratings'][player], guildid)
+        set_rating(str(player), match['old_ratings'][player], guildid)
+    for player in match['defenders']:
+        print(str(player), match['old_ratings'][player], guildid)
+        set_rating(str(player), match['old_ratings'][player], guildid)
+    
+    return True
+
 
 @bot.event
 async def on_ready():
