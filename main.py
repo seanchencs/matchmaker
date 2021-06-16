@@ -248,13 +248,12 @@ def undo_last_match(guildid):
         # delete from match history
         del db['history'][-1]
     for player in match['attackers']:
-        print(str(player), match['old_ratings'][player], guildid)
         set_rating(str(player), match['old_ratings'][player], guildid)
-    for player in match['defenders']:
-        print(str(player), match['old_ratings'][player], guildid)
-        set_rating(str(player), match['old_ratings'][player], guildid)
-    for player in match['attackers'] + match['defenders']:
         print(get_rating(player, guildid))
+    for player in match['defenders']:
+        set_rating(str(player), match['old_ratings'][player], guildid)
+        print(get_rating(player, guildid))
+        
     return True
 
 
