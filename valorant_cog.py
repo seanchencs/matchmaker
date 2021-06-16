@@ -532,7 +532,8 @@ class Valorant(commands.Cog):
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
     async def _undo(self, ctx: SlashContext):
         # reset the ratings
-        if not undo_last_match(ctx.guild.id):
+        match = undo_last_match(ctx.guild.id)
+        if not match:
             await ctx.send('Error undoing match.')
         # reset the record cooldown
         if ctx.guild.id in guild_to_last_result_time:

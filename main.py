@@ -88,7 +88,6 @@ def set_rating(userid, rating, guildid):
         if 'ratings' not in db:
             db['ratings'] = {}
         db['ratings'][userid] = rating.mu, rating.sigma
-    print(rating, get_rating(userid, guildid))
     print(f'[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
 def record_result(attackers, defenders, attacker_score, defender_score, guildid):
@@ -247,7 +246,7 @@ def undo_last_match(guildid):
     match = None
     with shelve.open(guildid, writeback=True) as db:
         if 'history' not in db or not db['history']:
-            return False
+            return None
         match = db['history'][-1]
         # delete from match history
         del db['history'][-1]
@@ -255,7 +254,7 @@ def undo_last_match(guildid):
         set_rating(str(player), match['old_ratings'][player], guildid)
     for player in match['defenders']:
         set_rating(str(player), match['old_ratings'][player], guildid)
-    return True
+    return match
 
 
 @bot.event
