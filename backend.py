@@ -24,6 +24,13 @@ def db_string(guildid):
             output.append(str(db[key]))
     return ' '.join(output)
 
+def get_playerlist(guildid):
+    """Get list of all userids in guild with ratings."""
+    players = []
+    with SqliteDict(str(guildid)+'.db') as db:
+        players = [uid for uid in db['ratings']]
+    return players
+
 def get_rating(userid, guildid):
     """Returns the TrueSkill rating of a discord user. Will initialize skill if none is found."""
     start = time.time()
@@ -148,6 +155,25 @@ def time_since_last_match(userid, guildid):
             if history:
                 return (datetime.now() - history[-1]['time']).total_seconds()
     return None
+
+def get_history(guildid, userid=None):
+    """Fetch list of matches for guild or specified user in guild."""
+    with SqliteDict(str(guildid)+'.db') as db:
+        if 'history' not in db or not db['history']:
+            return None
+        if userid:
+            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            history.reverse()
+            if not history:
+                return None
+            return history
+        else:
+            # guild-wide match history
+            history = db['history']
+            history.reverse()
+            if not history:
+                return None
+            return history
 
 def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""

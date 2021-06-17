@@ -1,18 +1,19 @@
 import random
 import time
 from math import ceil, isclose
+from discord_slash.model import SlashCommandPermissionType
 from sqlitedict import SqliteDict
 
 import trueskill as ts
 from asciichartpy import plot
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
-from discord_slash.utils.manage_commands import create_choice, create_option
+from discord_slash.utils.manage_commands import create_choice, create_option, create_permission
 from pytz import timezone
 from tabulate import tabulate
 
-from backend import (get_leaderboard, get_leaderboard_by_exposure,
-                  get_past_ratings, get_ranks, get_rating, get_win_loss,
+from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
+                  get_past_ratings, get_playerlist, get_ranks, get_rating, get_win_loss,
                   make_teams, record_result, undo_last_match)
 
 # local time zone
@@ -529,7 +530,10 @@ class Valorant(commands.Cog):
             rating_chart.append([name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
         await ctx.send(f"`\n{tabulate(rating_chart, headers=headers, tablefmt='psql')}\n`")
 
-    @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS)
+    @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS, permissions={
+        825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True),
+        342839495328137216: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
+    })
     async def _undo(self, ctx: SlashContext):
         # reset the ratings
         match = undo_last_match(ctx.guild.id)
@@ -552,73 +556,65 @@ class Valorant(commands.Cog):
     )
     async def _history(self, ctx: SlashContext, user=None):
         output = []
-        with SqliteDict(str(ctx.guild.id)+'.db') as db:
-            if 'history' not in db or not db['history']:
+        if user:
+            userid = str(user.id)
+            # per-user match history
+            history = get_history(ctx.guild.id, userid=userid)
+            if not history:
                 await ctx.send('No recorded matches.')
                 return
-            if user:
-                userid = str(user.id)
-                # per-user match history
-                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
-                history.reverse()
-                if not history:
-                    await ctx.send('No recorded matches.')
-                    return
-                
-                # plot rating history
-                past_ratings = get_past_ratings(userid, ctx.guild.id)
-                # scaling
-                if len(past_ratings) < 30:
-                    past_ratings = [val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))]
-                elif len(past_ratings) > 60:
-                    past_ratings = past_ratings[::len(past_ratings)//30]
-                output.append('`Rating History:\n' + plot(past_ratings) + '`\n')
+            
+            # plot rating history
+            past_ratings = get_past_ratings(userid, ctx.guild.id)
+            # scaling
+            if len(past_ratings) < 30:
+                past_ratings = [val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))]
+            elif len(past_ratings) > 60:
+                past_ratings = past_ratings[::len(past_ratings)//30]
+            output.append('`Rating History:\n' + plot(past_ratings) + '`\n')
 
-                # win/loss
-                win, loss = get_win_loss(userid, ctx.guild.id)
-                output.append(f'\n`Match History ({win}W {loss}L):`\n')
+            # win/loss
+            win, loss = get_win_loss(userid, ctx.guild.id)
+            output.append(f'\n`Match History ({win}W {loss}L):`\n')
 
-                # list of past matches
-                if len(history) > 10:
-                    recent = history[:10]
-                else:
-                    recent = history
-                for match in recent:
-                    output.append(f"`{match['time'].strftime(time_format)}: ")
-                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
-                    output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
-                    if userid in match['attackers']:
-                        output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['attackers'][userid].mu: .2f})`\n")
-                    else:
-                        output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['defenders'][userid].mu: .2f})`\n")
-                if len(history) > 10:
-                    output.append(f"`... and {len(history)-10} more`")
+            # list of past matches
+            if len(history) > 10:
+                recent = history[:10]
             else:
-                # guild-wide match history
-                history = db['history'][-10:]
-                history.reverse()
-                all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in db['ratings']]
+                recent = history
+            for match in recent:
+                output.append(f"`{match['time'].strftime(time_format)}: ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
+                output.append(f" { match['attacker_score']} - {match['defender_score']} ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                if userid in match['attackers']:
+                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['attackers'][userid].mu: .2f})`\n")
+                else:
+                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['defenders'][userid].mu: .2f})`\n")
+            if len(history) > 10:
+                output.append(f"`... and {len(history)-10} more`")
+        else:
+            # guild-wide match history
+            history = get_history(ctx.guild.id)
+            all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in get_playerlist(ctx.guild.id)]
 
-                # scaling
-                if all_past_ratings and len(all_past_ratings[0]) < 30:
-                    all_past_ratings = [[val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))] for past_ratings in all_past_ratings]
-                if all_past_ratings and len(all_past_ratings[0]) > 60:
-                    all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
-                output.append('`Rating History:\n' + plot(all_past_ratings) + '`\n\n')
+            # scaling
+            if all_past_ratings and len(all_past_ratings[0]) < 30:
+                all_past_ratings = [[val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))] for past_ratings in all_past_ratings]
+            if all_past_ratings and len(all_past_ratings[0]) > 60:
+                all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
+            output.append('`Rating History:\n' + plot(all_past_ratings) + '`\n\n')
 
-                if len(db['history']) > 10:
-                    output.append('`10 most recent matches:`\n')
-                for match in history:
-                    # match info
-                    output.append(f"`{match['time'].strftime(time_format)}: ")
-                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
-                    output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                    output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
-                    output.append('`\n')
-                if len(db['history']) > 10:
-                    output.append(f"`... and {len(db['history'])-10} more`")
-
+            output.append('`Recent matches:`\n')
+            for match in history[-10:]:
+                # match info
+                output.append(f"`{match['time'].strftime(time_format)}: ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
+                output.append(f" { match['attacker_score']} - {match['defender_score']} ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                output.append('`\n')
+            if len(history) > 10:
+                output.append(f"`... and {len(history)-10} more`")
         await ctx.send(''.join(output))
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
