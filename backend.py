@@ -6,9 +6,9 @@ from datetime import datetime
 from math import isclose
 
 import trueskill as ts
+from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score
-from sqlitedict import SqliteDict
 
 # TrueSkill DB helper functions
 def delete_db(guildid):

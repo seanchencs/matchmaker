@@ -1,20 +1,20 @@
 import random
 import time
 from math import ceil, isclose
-from discord_slash.model import SlashCommandPermissionType
-from sqlitedict import SqliteDict
 
 import trueskill as ts
 from asciichartpy import plot
 from discord.ext import commands
 from discord_slash import SlashContext, cog_ext
-from discord_slash.utils.manage_commands import create_choice, create_option, create_permission
+from discord_slash.model import SlashCommandPermissionType
+from discord_slash.utils.manage_commands import (create_choice, create_option,
+                                                 create_permission)
 from pytz import timezone
 from tabulate import tabulate
 
 from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
-                  get_past_ratings, get_playerlist, get_ranks, get_rating, get_win_loss,
-                  make_teams, record_result, undo_last_match)
+                     get_past_ratings, get_playerlist, get_ranks, get_rating,
+                     get_win_loss, make_teams, record_result, undo_last_match)
 
 # local time zone
 central = timezone('US/Central')
@@ -353,7 +353,6 @@ class Valorant(commands.Cog):
             else:
                 guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
             await ctx.send(f"**{guild_to_next_team_to_veto[ctx.guild.id].capitalize()}** turn to /veto")
-            
 
     @cog_ext.cog_slash(name='veto', description='veto a map', guild_ids=GUILDS, options=[
         create_option(
