@@ -223,7 +223,6 @@ class Valorant(commands.Cog):
         await ctx.send(output_string)
 
     async def custom(self, ctx: SlashContext):
-        start_time = time.time()
         # send custom matchmaking message
         guild_to_custom_msg[ctx.guild.id] = await ctx.send('React with 🟥 to join Attackers or 🟦 to join Defenders')
         await guild_to_custom_msg[ctx.guild.id].add_reaction('🟥')
