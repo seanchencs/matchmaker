@@ -45,27 +45,24 @@ class Valorant(commands.Cog):
     async def on_raw_reaction_add(self, payload):
         # update start message with reactors
         if payload.guild_id in guild_to_start_msg and payload.message_id == guild_to_start_msg[payload.guild_id].id:
-            channel = self.bot.get_channel(payload.channel_id)
-            start_msg = await channel.fetch_message(guild_to_start_msg[payload.guild_id].id)
-            players = set()
-            for reaction in start_msg.reactions:
-                users = await reaction.users().flatten()
-                players.update((user.id for user in users))
-            output_message = "React to this message if you're playing" + f' ({len(players)})' + ''.join([f'\t<@!{member}>' for member in players] )
-            await start_msg.edit(content=output_message)
+            await self.update_start_message(payload)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         # update start message with reactors
         if payload.guild_id in guild_to_start_msg and payload.message_id == guild_to_start_msg[payload.guild_id].id:
-            channel = self.bot.get_channel(payload.channel_id)
-            start_msg = await channel.fetch_message(guild_to_start_msg[payload.guild_id].id)
-            players = set()
-            for reaction in start_msg.reactions:
-                users = await reaction.users().flatten()
-                players.update((user.id for user in users))
-            output_message = "React to this message if you're playing" + f' ({len(players)})' + ''.join([f'\t<@!{member}>' for member in players])
-            await start_msg.edit(content=output_message)
+            await self.update_start_message(payload)
+
+    async def update_start_message(self, payload):
+        """Update the start message with list of reactors."""
+        channel = self.bot.get_channel(payload.channel_id)
+        start_msg = await channel.fetch_message(guild_to_start_msg[payload.guild_id].id)
+        players = set()
+        for reaction in start_msg.reactions:
+            users = await reaction.users().flatten()
+            players.update((user.id for user in users))
+        output_message = "React to this message if you're playing" + f' ({len(players)})' + ''.join([f'\t<@!{member}>' for member in players] )
+        await start_msg.edit(content=output_message)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
