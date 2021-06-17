@@ -10,6 +10,7 @@ from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score
 
+
 # TrueSkill DB helper functions
 def delete_db(guildid):
     guildid = str(guildid)

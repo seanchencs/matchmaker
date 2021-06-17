@@ -31,6 +31,7 @@ VALORANT_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_n
 
 # dicts for guild-local variables
 guild_to_start_msg = {} # message id of start message
+guild_to_custom_msg = {} # custom matchmaking message
 guild_to_teams = {} # {'attackers': [list of uids], 'defenders': [list of uids]}
 guild_to_last_result_time = {} # time of last recorded result (for record cooldown)
 guild_to_remaining_maps = {} # list of remaining maps in veto process
@@ -46,12 +47,18 @@ class Valorant(commands.Cog):
         # update start message with reactors
         if payload.guild_id in guild_to_start_msg and payload.message_id == guild_to_start_msg[payload.guild_id].id:
             await self.update_start_message(payload)
+        # update custom message
+        elif payload.guild_id in guild_to_custom_msg and payload.message_id == guild_to_custom_msg[payload.guild_id].id:
+            await self.update_custom_message(payload)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         # update start message with reactors
         if payload.guild_id in guild_to_start_msg and payload.message_id == guild_to_start_msg[payload.guild_id].id:
             await self.update_start_message(payload)
+        # update custom message
+        elif payload.guild_id in guild_to_custom_msg and payload.message_id == guild_to_custom_msg[payload.guild_id].id:
+            await self.update_custom_message(payload)
 
     async def update_start_message(self, payload):
         """Update the start message with list of reactors."""
@@ -63,6 +70,31 @@ class Valorant(commands.Cog):
             players.update((user.id for user in users))
         output_message = "React to this message if you're playing" + f' ({len(players)})' + ''.join([f'\t<@!{member}>' for member in players] )
         await start_msg.edit(content=output_message)
+
+    async def update_custom_message(self, payload):
+        """Update the custom message with teams."""
+        channel = self.bot.get_channel(payload.channel_id)
+        start_msg = await channel.fetch_message(guild_to_custom_msg[payload.guild_id].id)
+        attackers = defenders = []
+        # read reactions
+        for reaction in start_msg.reactions:
+            if reaction.emoji == '🟥':
+                attackers = await reaction.users().flatten()
+                attackers = [str(user.id) for user in attackers if user.id != self.bot.user.id]
+            elif reaction.emoji == '🟦':
+                defenders = await reaction.users().flatten()
+                defenders = [str(user.id) for user in defenders if user.id != self.bot.user.id and str(user.id) not in attackers]
+        output = ['React with 🟥 to join Attackers or 🟦 to join Defenders\n']
+        # evaluate teams
+        if attackers and defenders:
+            attacker_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in attackers}
+            defender_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in defenders}
+            quality = ts.quality([attacker_ratings, defender_ratings])
+            output.append(f'\n**Predicted Quality: {quality*100: .2f}%**\n\n')
+            output.append('**Attackers**: ' + ' '.join([f'<@!{member}>' for member in attackers]) + '\n')
+            output.append('**Defenders**: ' + ' '.join([f'<@!{member}>' for member in defenders]))
+            guild_to_teams[payload.guild_id] = {'attackers': attackers, 'defenders': defenders}
+        await guild_to_custom_msg[payload.guild_id].edit(content=''.join(output))
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -107,13 +139,19 @@ class Valorant(commands.Cog):
                 create_choice(
                     name='rated',
                     value='rated'
+                ),
+                create_choice(
+                    name='custom',
+                    value='custom'
                 )
             ]
 
         )
     ])
     async def _make(self, ctx: SlashContext, match_type: str, description='matchmake game from reacts to /start with option for MMR'):
-        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
+        if match_type == 'custom':
+            await self.custom(ctx)
+        elif ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
             await ctx.send('use */start* before */make*')
             return
         if ctx.guild.id in guild_to_last_result_time:
@@ -184,6 +222,13 @@ class Valorant(commands.Cog):
         print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(output_string)
 
+    async def custom(self, ctx: SlashContext):
+        start_time = time.time()
+        # send custom matchmaking message
+        guild_to_custom_msg[ctx.guild.id] = await ctx.send('React with 🟥 to join Attackers or 🟦 to join Defenders')
+        await guild_to_custom_msg[ctx.guild.id].add_reaction('🟥')
+        await guild_to_custom_msg[ctx.guild.id].add_reaction('🟦')
+
     @cog_ext.cog_slash(name='record', guild_ids=GUILDS, description='record match result and update player ratings', options=[
         create_option(
             name='winner',
@@ -218,9 +263,6 @@ class Valorant(commands.Cog):
     async def _record(self, ctx: SlashContext, winner:str, winning_score:int, losing_score:int, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id in guild_to_last_result_time and time.time() - guild_to_last_result_time[ctx.guild.id] < 60:
             await ctx.send(f'Result already recorded. Wait {round(60 - (time.time() - guild_to_last_result_time[ctx.guild.id]))}s before recording another result.')
-            return
-        if ctx.guild.id not in guild_to_start_msg or guild_to_start_msg[ctx.guild.id] is None:
-            await ctx.send('use */start* and */make* before */record*')
             return
         if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]['attackers']:
             await ctx.send('use */make* before */record*')
