@@ -102,7 +102,7 @@ class Matchmaker(commands.Cog):
                 a_vc = vc
             elif vc.name.lower() == TEAM_B_NAME:
                 b_vc = vc
-        # delete VALORANT channels if they're empty
+        # delete voice channels if they're empty
         if a_vc is not None and b_vc is not None:
             if len(a_vc.members) == len(b_vc.members) == 0:
                 await a_vc.delete()
@@ -478,7 +478,7 @@ class Matchmaker(commands.Cog):
         gd = ctx.guild
         # find team voice channels
         a_vc, b_vc = None, None
-        # check if Valorant channel category exists
+        # check if category exists
         game_category = None
         for category in gd.categories:
             if category.name.lower() == GAME_NAME.lower():
@@ -486,9 +486,8 @@ class Matchmaker(commands.Cog):
         if game_category is None:
             # make it
             game_category = await gd.create_category_channel(GAME_NAME)
-            # await ctx.send("VALORANT category created.")
         for vc in gd.voice_channels:
-            # ignore voice channels outside of VALORANT
+            # ignore voice channels outside of category
             if vc.category != game_category:
                 continue
             if vc.name.lower() == TEAM_A_NAME:
@@ -644,10 +643,10 @@ class Matchmaker(commands.Cog):
 
     @cog_ext.cog_slash(name='clean', description='reset teams and remove created voice channels', guild_ids=GUILDS)
     async def _clean(self, ctx: SlashContext):
-        # find VALORANT voice channels
+        # find voice channels
         guild = ctx.guild
         for vc in guild.voice_channels:
-            # ignore voice channels outside of VALORANT
+            # ignore voice channels outside of category
             if vc.category is not None and vc.category.name.lower() != GAME_NAME.lower():
                 continue
             if vc.name.lower() == TEAM_A_NAME:
@@ -656,7 +655,7 @@ class Matchmaker(commands.Cog):
             elif vc.name.lower() == TEAM_B_NAME:
                 await vc.delete()
                 await ctx.send(f'{TEAM_B_NAME.capitalize()} voice channel deleted.')
-        # delete VALORANT category
+        # delete category
         for category in guild.categories:
             if category.name.lower() == GAME_NAME.lower():
                 await category.delete()
