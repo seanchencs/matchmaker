@@ -1,5 +1,7 @@
 # Matchmaker, a Discord matchmaking bot
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/93e0557bd829414b99824b19c2cbf844)](https://app.codacy.com/gh/seanchencs/matchmaker?utm_source=github.com&utm_medium=referral&utm_content=seanchencs/matchmaker&utm_campaign=Badge_Grade_Settings)
+
 Matchmake in-house teams with MMR through Discord.
 
 Integration with Discord Slash Commands.
