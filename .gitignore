@@ -2,8 +2,6 @@
 .log
 .db
 .env
-.vscode
+.vscode/
 todo
-__pycache__/backend.cpython-38.pyc
-__pycache__/test_cog.cpython-38.pyc
-__pycache__/valorant_cog.cpython-38.pyc
+__pycache__/
