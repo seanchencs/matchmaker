@@ -9,7 +9,6 @@ from discord_slash import SlashContext, cog_ext
 from discord_slash.model import SlashCommandPermissionType
 from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
-from pytz import timezone
 from tabulate import tabulate
 
 from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
@@ -371,8 +370,8 @@ class Matchmaker(commands.Cog):
     ])
     async def _map(self, ctx: SlashContext, method='random'):
         if method == 'random':
-            map = random.choice(MAP_POOL)
-            await ctx.send(f'**MAP: {map}**')
+            map_choice = random.choice(MAP_POOL)
+            await ctx.send(f'**MAP: {map_choice}**')
         elif method == 'veto':
             if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
                 await ctx.send('use /make before veto')
@@ -589,7 +588,7 @@ class Matchmaker(commands.Cog):
             if not history:
                 await ctx.send('No recorded matches.')
                 return
-            
+
             # plot rating history
             past_ratings = get_past_ratings(userid, ctx.guild.id)
             # scaling
