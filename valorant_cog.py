@@ -15,31 +15,23 @@ from tabulate import tabulate
 from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
                      get_past_ratings, get_playerlist, get_ranks, get_rating,
                      get_win_loss, make_teams, record_result, undo_last_match)
+from config import (GAME_NAME, TEAM_A_NAME, TEAM_B_NAME, GUILDS, ADMINS, MAP_POOL)
 
-# local time zone
-central = timezone('US/Central')
 time_format = '%a %b %-d %-I:%M %p'
-
-# global discord id lists
-GUILDS = [825900837083676732, 813149413782061057]
-ADMINS = [335828416412778496, 263745246821744640]
-
-# VALORANT MAPS
-VALORANT_MAP_POOL = ['Bind', 'Haven', 'Split', 'Ascent', 'Icebox', 'Breeze']
-VALORANT_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in VALORANT_MAP_POOL]
-
+MAP_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in MAP_POOL]
+ADMIN_PERMISSIONS = {admin_id: create_permission(guild_id, SlashCommandPermissionType.USER, True) for admin_id in ADMINS for guild_id in GUILDS}
 
 # dicts for guild-local variables
 guild_to_start_msg = {} # message id of start message
 guild_to_custom_msg = {} # custom matchmaking message
-guild_to_teams = {} # {'attackers': [list of uids], 'defenders': [list of uids]}
+guild_to_teams = {} # {TEAM_A_NAME: [list of uids], TEAM_B_NAME: [list of uids]}
 guild_to_last_result_time = {} # time of last recorded result (for record cooldown)
 guild_to_remaining_maps = {} # list of remaining maps in veto process
-guild_to_next_team_to_veto = {} # 'attackers' or 'defenders' next to veto
+guild_to_next_team_to_veto = {} # TEAM_A_NAME or TEAM_B_NAME next to veto
 
-class Valorant(commands.Cog):
+class Matchmaker(commands.Cog):
     def __init__(self, bot):
-        """VALORANT commands for matchmaking Discord bot."""
+        """Commands for matchmaking Discord bot."""
         self.bot = bot
 
     @commands.Cog.listener()
@@ -75,49 +67,49 @@ class Valorant(commands.Cog):
         """Update the custom message with teams."""
         channel = self.bot.get_channel(payload.channel_id)
         start_msg = await channel.fetch_message(guild_to_custom_msg[payload.guild_id].id)
-        attackers = defenders = []
+        team_a = team_b = []
         # read reactions
         for reaction in start_msg.reactions:
             if reaction.emoji == '🟥':
-                attackers = await reaction.users().flatten()
-                attackers = [str(user.id) for user in attackers if user.id != self.bot.user.id]
+                team_a = await reaction.users().flatten()
+                team_a = [str(user.id) for user in team_a if user.id != self.bot.user.id]
             elif reaction.emoji == '🟦':
-                defenders = await reaction.users().flatten()
-                defenders = [str(user.id) for user in defenders if user.id != self.bot.user.id and str(user.id) not in attackers]
-        output = ['React with 🟥 to join Attackers or 🟦 to join Defenders\n']
+                team_b = await reaction.users().flatten()
+                team_b = [str(user.id) for user in team_b if user.id != self.bot.user.id and str(user.id) not in team_a]
+        output = [f'React with 🟥 to join {TEAM_A_NAME.capitalize()} or 🟦 to join {TEAM_B_NAME.capitalize()}\n']
         # evaluate teams
-        if attackers and defenders:
-            attacker_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in attackers}
-            defender_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in defenders}
+        if team_a and team_b:
+            attacker_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_a}
+            defender_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_b}
             quality = ts.quality([attacker_ratings, defender_ratings])
             output.append(f'\n**Predicted Quality: {quality*100: .2f}%**\n\n')
-            output.append('**Attackers**: ' + ' '.join([f'<@!{member}>' for member in attackers]) + '\n')
-            output.append('**Defenders**: ' + ' '.join([f'<@!{member}>' for member in defenders]))
-            guild_to_teams[payload.guild_id] = {'attackers': attackers, 'defenders': defenders}
+            output.append(f'**{TEAM_A_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_a]) + '\n')
+            output.append(f'**{TEAM_B_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_b]))
+            guild_to_teams[payload.guild_id] = {TEAM_A_NAME: team_a, TEAM_B_NAME: team_b}
         await guild_to_custom_msg[payload.guild_id].edit(content=''.join(output))
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Clean up created voice channels if they're empty."""
-        if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != 'valorant':
+        if before.channel == None or before.channel.category == None or before.channel.category.name.lower() != GAME_NAME.lower():
             return
         prev_guild = before.channel.guild
-        t_vc = ct_vc = None
+        a_vc = b_vc = None
         # find channels
         for vc in prev_guild.voice_channels:
-            if vc.category == None or vc.category.name.lower() != 'valorant':
+            if vc.category == None or vc.category.name.lower() != GAME_NAME.lower():
                 continue
-            if vc.name.lower() == 'attackers':
-                t_vc = vc
-            elif vc.name.lower() == 'defenders':
-                ct_vc = vc
+            if vc.name.lower() == TEAM_A_NAME:
+                a_vc = vc
+            elif vc.name.lower() == TEAM_B_NAME:
+                b_vc = vc
         # delete VALORANT channels if they're empty
-        if t_vc is not None and ct_vc is not None:
-            if len(t_vc.members) == len(ct_vc.members) == 0:
-                await t_vc.delete()
-                await ct_vc.delete()
+        if a_vc is not None and b_vc is not None:
+            if len(a_vc.members) == len(b_vc.members) == 0:
+                await a_vc.delete()
+                await b_vc.delete()
                 for category in prev_guild.categories:
-                    if category.name.lower() == 'valorant':
+                    if category.name.lower() == GAME_NAME.lower():
                         await category.delete()
 
     @cog_ext.cog_slash(name='start', guild_ids=GUILDS, description='start matchmaking process, bot sends message for players to react to')
@@ -165,7 +157,7 @@ class Valorant(commands.Cog):
         # read reacts and make teams randomly without ranks
         start_time = time.time()
         # read reacts
-        guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
         start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
         players = set()
         for reaction in start_msg.reactions:
@@ -186,8 +178,8 @@ class Valorant(commands.Cog):
         for member in defenders:
             output += f'\t<@!{member}>'
         # store teams
-        guild_to_teams[ctx.guild.id]['attackers'] = attackers
-        guild_to_teams[ctx.guild.id]['defenders'] = defenders
+        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = attackers
+        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = defenders
         # send output
         print(f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
@@ -195,7 +187,7 @@ class Valorant(commands.Cog):
     async def rated(self, ctx: SlashContext):
         start_time = time.time()
         # read reacts
-        guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
         start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
         players = set()
         for reaction in start_msg.reactions:
@@ -216,8 +208,8 @@ class Valorant(commands.Cog):
         for member in defenders:
             output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '
         # store teams
-        guild_to_teams[ctx.guild.id]['attackers'] = attackers
-        guild_to_teams[ctx.guild.id]['defenders'] = defenders
+        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = attackers
+        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = defenders
         # send output
         print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(output_string)
@@ -236,12 +228,12 @@ class Valorant(commands.Cog):
             required=True,
             choices=[
                 create_choice(
-                    name='attackers',
-                    value='attackers'
+                    name=TEAM_A_NAME,
+                    value=TEAM_A_NAME
                 ),
                 create_choice(
-                    name='defenders',
-                    value='defenders'
+                    name=TEAM_B_NAME,
+                    value=TEAM_B_NAME
                 )
             ]
 
@@ -263,99 +255,99 @@ class Valorant(commands.Cog):
         if ctx.guild.id in guild_to_last_result_time and time.time() - guild_to_last_result_time[ctx.guild.id] < 60:
             await ctx.send(f'Result already recorded. Wait {round(60 - (time.time() - guild_to_last_result_time[ctx.guild.id]))}s before recording another result.')
             return
-        if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]['attackers']:
+        if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id][TEAM_A_NAME]:
             await ctx.send('use */make* before */record*')
             return
         if winning_score < losing_score:
             await ctx.send('ERROR: Winning team cannot have won less rounds than losing team.')
             return
-        if winner == 'attackers':
-            await self._attackers(winning_score, losing_score, ctx)
-        elif winner == 'defenders':
-            await self._defenders(winning_score, losing_score, ctx)
+        if winner == TEAM_A_NAME:
+            await self._team_a_win(winning_score, losing_score, ctx)
+        elif winner == TEAM_B_NAME:
+            await self._team_b_win(winning_score, losing_score, ctx)
         guild_to_last_result_time[ctx.guild.id] = time.time()
 
-    async def _attackers(self, winning_score, losing_score, ctx: SlashContext):
-        if not guild_to_teams[ctx.guild.id]['attackers']:
+    async def _team_a_win(self, winning_score, losing_score, ctx: SlashContext):
+        if not guild_to_teams[ctx.guild.id][TEAM_A_NAME]:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            attacker, defender = guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders']
-            ranks_old = get_ranks(attacker+defender, ctx.guild.id)
-            attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, winning_score, losing_score, ctx.guild.id)
-            ranks_new = get_ranks(attacker+defender, ctx.guild.id)
+            a, b = guild_to_teams[ctx.guild.id][TEAM_A_NAME], guild_to_teams[ctx.guild.id][TEAM_B_NAME]
+            ranks_old = get_ranks(a+b, ctx.guild.id)
+            team_a_old, team_b_old, team_a_new, team_b_new = record_result(a, b, winning_score, losing_score, ctx.guild.id)
+            ranks_new = get_ranks(a+b, ctx.guild.id)
 
             output = []
-            output.append('**Win for Attackers Recorded.**\n\n')
+            output.append(f'**Win for {TEAM_A_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = ['Attacker', 'ΔRating', 'ΔExposure', 'ΔRank']
-            attacker_chart = []
-            for attacker in attackers_new:
-                member = ctx.guild.get_member(int(attacker))
+            headers = [TEAM_A_NAME, 'ΔRating', 'ΔExposure', 'ΔRank']
+            team_a_chart = []
+            for a in team_a_new:
+                member = ctx.guild.get_member(int(a))
                 name = member.name
-                delta_rating = f'{attackers_old[attacker].mu: .2f}->{attackers_new[attacker].mu: .2f}'
-                delta_exposure = f'{ts.expose(attackers_old[attacker]): .2f}->{ts.expose(attackers_new[attacker]): .2f}'
-                if ranks_old and attacker in ranks_old:
-                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                delta_rating = f'{team_a_old[a].mu: .2f}->{team_a_new[a].mu: .2f}'
+                delta_exposure = f'{ts.expose(team_a_old[a]): .2f}->{ts.expose(team_a_new[a]): .2f}'
+                if ranks_old and a in ranks_old:
+                    delta_rank = f'{ranks_old[a]}->{ranks_new[a]}'
                 else:
-                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
-                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {winning_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n\n")
+                    delta_rank = f'{ranks_new[a]} (NEW!)'
+                team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`{TEAM_A_NAME.capitalize()} - {winning_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = ['Defender', 'ΔRating', 'ΔExposure', 'ΔRank']
-            defender_chart = []
-            for defender in defenders_new:
-                member = ctx.guild.get_member(int(defender))
+            headers = [TEAM_B_NAME, 'ΔRating', 'ΔExposure', 'ΔRank']
+            team_b_chart = []
+            for b in team_b_new:
+                member = ctx.guild.get_member(int(b))
                 name = member.name
-                delta_rating = f'{defenders_old[defender].mu: .2f}->{defenders_new[defender].mu: .2f}'
-                delta_exposure = f'{ts.expose(defenders_old[defender]): .2f}->{ts.expose(defenders_new[defender]): .2f}'
-                if ranks_old and defender in ranks_old:
-                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                delta_rating = f'{team_b_old[b].mu: .2f}->{team_b_new[b].mu: .2f}'
+                delta_exposure = f'{ts.expose(team_b_old[b]): .2f}->{ts.expose(team_b_new[b]): .2f}'
+                if ranks_old and b in ranks_old:
+                    delta_rank = f'{ranks_old[b]}->{ranks_new[b]}'
                 else:
-                    delta_rank = f'{ranks_new[defender]} (NEW!)'
-                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Defenders - {losing_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
+                    delta_rank = f'{ranks_new[b]} (NEW!)'
+                team_b_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`{TEAM_B_NAME.capitalize()} - {losing_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
 
-    async def _defenders(self, winning_score, losing_score, ctx: SlashContext):
-        if not guild_to_teams[ctx.guild.id]['defenders']:
+    async def _team_b_win(self, winning_score, losing_score, ctx: SlashContext):
+        if not guild_to_teams[ctx.guild.id][TEAM_B_NAME]:
             await ctx.send('use *$make* or *$rated* before recording a result')
         else:
-            attacker, defender = guild_to_teams[ctx.guild.id]['attackers'], guild_to_teams[ctx.guild.id]['defenders']
-            ranks_old = get_ranks(attacker+defender, ctx.guild.id)
-            attackers_old, defenders_old, attackers_new, defenders_new = record_result(attacker, defender, losing_score, winning_score, ctx.guild.id)
-            ranks_new = get_ranks(attacker+defender, ctx.guild.id)
+            a, b = guild_to_teams[ctx.guild.id][TEAM_A_NAME], guild_to_teams[ctx.guild.id][TEAM_B_NAME]
+            ranks_old = get_ranks(a+b, ctx.guild.id)
+            team_a_old, team_b_old, team_a_new, team_b_new = record_result(a, b, losing_score, winning_score, ctx.guild.id)
+            ranks_new = get_ranks(a+b, ctx.guild.id)
 
             output = []
-            output.append('**Win for Defenders Recorded.**\n\n')
+            output.append(f'**Win for {TEAM_B_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = ['Attacker', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
-            attacker_chart = []
-            for attacker in attackers_new:
-                member = ctx.guild.get_member(int(attacker))
+            headers = [TEAM_A_NAME, 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            team_a_chart = []
+            for a in team_a_new:
+                member = ctx.guild.get_member(int(a))
                 name = member.name
-                delta_rating = f'{attackers_old[attacker].mu: .2f}->{attackers_new[attacker].mu: .2f}'
-                delta_exposure = f'{ts.expose(attackers_old[attacker]): .2f}->{ts.expose(attackers_new[attacker]): .2f}'
-                if ranks_old and attacker in ranks_old:
-                    delta_rank = f'{ranks_old[attacker]}->{ranks_new[attacker]}'
+                delta_rating = f'{team_a_old[a].mu: .2f}->{team_a_new[a].mu: .2f}'
+                delta_exposure = f'{ts.expose(team_a_old[a]): .2f}->{ts.expose(team_a_new[a]): .2f}'
+                if ranks_old and a in ranks_old:
+                    delta_rank = f'{ranks_old[a]}->{ranks_new[a]}'
                 else:
-                    delta_rank = f'{ranks_new[attacker]} (NEW!)'
-                attacker_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {losing_score}:\n{tabulate(attacker_chart, headers=headers, tablefmt='psql')}`\n\n")
+                    delta_rank = f'{ranks_new[a]} (NEW!)'
+                team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`Attackers - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = ['Defender', 'Δ Rating', 'Δ Exposure', 'Δ Rank']
-            defender_chart = []
-            for defender in defenders_new:
-                member = ctx.guild.get_member(int(defender))
+            headers = [TEAM_B_NAME, 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            team_b_chart = []
+            for b in team_b_new:
+                member = ctx.guild.get_member(int(b))
                 name = member.name
-                delta_rating = f'{defenders_old[defender].mu: .2f}->{defenders_new[defender].mu: .2f}'
-                delta_exposure = f'{ts.expose(defenders_old[defender]): .2f}->{ts.expose(defenders_new[defender]): .2f}'
-                if ranks_old and defender in ranks_old:
-                    delta_rank = f'{ranks_old[defender]}->{ranks_new[defender]}'
+                delta_rating = f'{team_b_old[b].mu: .2f}->{team_b_new[b].mu: .2f}'
+                delta_exposure = f'{ts.expose(team_b_old[b]): .2f}->{ts.expose(team_b_new[b]): .2f}'
+                if ranks_old and b in ranks_old:
+                    delta_rank = f'{ranks_old[b]}->{ranks_new[b]}'
                 else:
-                    delta_rank = f'{ranks_new[defender]} (NEW!)'
-                defender_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Defenders - {winning_score}:\n{tabulate(defender_chart, headers=headers, tablefmt='psql')}`\n")
+                    delta_rank = f'{ranks_new[b]} (NEW!)'
+                team_b_chart.append([name, delta_rating, delta_exposure, delta_rank])
+            output.append(f"`{TEAM_B_NAME.capitalize()} - {winning_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
 
@@ -379,20 +371,20 @@ class Valorant(commands.Cog):
     ])
     async def _map(self, ctx: SlashContext, method='random'):
         if method == 'random':
-            map = random.choice(VALORANT_MAP_POOL)
+            map = random.choice(MAP_POOL)
             await ctx.send(f'**MAP: {map}**')
         elif method == 'veto':
             if ctx.guild.id not in guild_to_teams or not guild_to_teams[ctx.guild.id]:
                 await ctx.send('use /make before veto')
                 return
-            guild_to_remaining_maps[ctx.guild.id] = VALORANT_MAP_POOL.copy()
+            guild_to_remaining_maps[ctx.guild.id] = MAP_POOL.copy()
             # next to veto
-            a_total = sum([get_rating(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id]['attackers']])
-            d_total = sum([get_rating(d, ctx.guild.id).mu for d in guild_to_teams[ctx.guild.id]['defenders']])
+            a_total = sum([get_rating(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id][TEAM_A_NAME]])
+            d_total = sum([get_rating(b, ctx.guild.id).mu for b in guild_to_teams[ctx.guild.id][TEAM_B_NAME]])
             if a_total > d_total:
-                guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
+                guild_to_next_team_to_veto[ctx.guild.id] = TEAM_B_NAME
             else:
-                guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
+                guild_to_next_team_to_veto[ctx.guild.id] = TEAM_A_NAME
             await ctx.send(f"**{guild_to_next_team_to_veto[ctx.guild.id].capitalize()}** turn to /veto")
 
     @cog_ext.cog_slash(name='veto', description='veto a map', guild_ids=GUILDS, options=[
@@ -401,7 +393,7 @@ class Valorant(commands.Cog):
             description='map to veto',
             option_type=3,
             required=True,
-            choices=VALORANT_SLASH_CHOICES
+            choices=MAP_SLASH_CHOICES
         )
     ])
     async def _veto(self, ctx: SlashContext, choice):
@@ -428,10 +420,10 @@ class Valorant(commands.Cog):
             guild_to_remaining_maps[ctx.guild.id] = []
             return
 
-        if guild_to_next_team_to_veto[ctx.guild.id] == 'attackers':
-            guild_to_next_team_to_veto[ctx.guild.id] = 'defenders'
+        if guild_to_next_team_to_veto[ctx.guild.id] == TEAM_A_NAME:
+            guild_to_next_team_to_veto[ctx.guild.id] = TEAM_B_NAME
         else:
-            guild_to_next_team_to_veto[ctx.guild.id] = 'attackers'
+            guild_to_next_team_to_veto[ctx.guild.id] = TEAM_A_NAME
 
         output += f'Remaining Maps: **{", ".join(guild_to_remaining_maps[ctx.guild.id])}**\n'
         output += f"{guild_to_next_team_to_veto[ctx.guild.id].capitalize()} turn to /veto\n"
@@ -485,59 +477,59 @@ class Valorant(commands.Cog):
             await ctx.send("Use /start to begin matchmaking.")
             return
         gd = ctx.guild
-        # find attacker and defender voice channels
-        attacker_channel, defender_channel = None, None
+        # find team voice channels
+        a_vc, b_vc = None, None
         # check if Valorant channel category exists
-        valorant_category = None
+        game_category = None
         for category in gd.categories:
-            if category.name.lower() == 'valorant':
-                valorant_category = category
-        if valorant_category is None:
+            if category.name.lower() == GAME_NAME.lower():
+                game_category = category
+        if game_category is None:
             # make it
-            valorant_category = await gd.create_category_channel('VALORANT')
+            game_category = await gd.create_category_channel(GAME_NAME)
             # await ctx.send("VALORANT category created.")
         for vc in gd.voice_channels:
             # ignore voice channels outside of VALORANT
-            if vc.category != valorant_category:
+            if vc.category != game_category:
                 continue
-            if vc.name.lower() == 'attackers':
-                attacker_channel = vc
-            elif vc.name.lower() == 'defenders':
-                defender_channel = vc
+            if vc.name.lower() == TEAM_A_NAME:
+                a_vc = vc
+            elif vc.name.lower() == TEAM_B_NAME:
+                b_vc = vc
         # create vc if necessary
-        if attacker_channel is None:
-            attacker_channel = await gd.create_voice_channel('Attackers', category=valorant_category)
-        if defender_channel is None:
-            defender_channel = await gd.create_voice_channel('Defenders', category=valorant_category)
+        if a_vc is None:
+            a_vc = await gd.create_voice_channel(TEAM_A_NAME.capitalize(), category=game_category)
+        if b_vc is None:
+            b_vc = await gd.create_voice_channel(TEAM_B_NAME.capitalize(), category=game_category)
         # move members to right channel
-        attackers = guild_to_teams[gd.id]['attackers']
-        defenders = guild_to_teams[gd.id]['defenders']
+        team_a = guild_to_teams[gd.id][TEAM_A_NAME]
+        team_b = guild_to_teams[gd.id][TEAM_B_NAME]
         count = 0
-        for attacker in attackers:
-            member = gd.get_member(attacker)
+        for a in team_a:
+            member = gd.get_member(a)
             if member.voice is not None:
                 count += 1
-                await member.move_to(attacker_channel)
-        for defender in defenders:
-            member = gd.get_member(defender)
+                await member.move_to(a_vc)
+        for b in team_b:
+            member = gd.get_member(b)
             if member.voice is not None:
                 count += 1
-                await member.move_to(defender_channel)
+                await member.move_to(b_vc)
         await ctx.send(f"{count} player{'s' if count > 1 else ''} moved.")
 
     @cog_ext.cog_slash(name='back', description='move all players to same voice channel', guild_ids=GUILDS)
     async def _back(self, ctx: SlashContext):
-        # find VALORANT voice channels
+        # find voice channels
         guild = ctx.guild
         for vc in guild.voice_channels:
-            # ignore voice channels outside of VALORANT
-            if vc.category is not None and vc.category.name.lower() != 'valorant':
+            # ignore voice channels outside of game category
+            if vc.category is not None and vc.category.name.lower() != GAME_NAME.lower():
                 continue
-            elif vc.name.lower() == 'attackers':
+            elif vc.name.lower() == TEAM_A_NAME:
                 for vc2 in guild.voice_channels:
-                    if vc2.name.lower() == 'defenders':
-                        for defender in vc.members:
-                            await defender.move_to(vc2)
+                    if vc2.name.lower() == TEAM_B_NAME:
+                        for player in vc.members:
+                            await player.move_to(vc2)
                         await ctx.send('✅')
 
 
@@ -567,10 +559,7 @@ class Valorant(commands.Cog):
             rating_chart.append([name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
         await ctx.send(f"`\n{tabulate(rating_chart, headers=headers, tablefmt='psql')}\n`")
 
-    @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS, permissions={
-        825900837083676735: create_permission(263745246821744640, SlashCommandPermissionType.USER, True),
-        342839495328137216: create_permission(263745246821744640, SlashCommandPermissionType.USER, True)
-    })
+    @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS, permissions=ADMIN_PERMISSIONS)
     async def _undo(self, ctx: SlashContext):
         # reset the ratings
         match = undo_last_match(ctx.guild.id)
@@ -621,13 +610,13 @@ class Valorant(commands.Cog):
                 recent = history
             for match in recent:
                 output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
-                output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
-                if userid in match['attackers']:
-                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['attackers'][userid].mu: .2f})`\n")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_a']]))
+                output.append(f" { match['team_a_score']} - {match['team_b_score']} ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_b']]))
+                if userid in match['team_a']:
+                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_a'][userid].mu: .2f})`\n")
                 else:
-                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['defenders'][userid].mu: .2f})`\n")
+                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_b'][userid].mu: .2f})`\n")
             if len(history) > 10:
                 output.append(f"`... and {len(history)-10} more`")
         else:
@@ -642,13 +631,13 @@ class Valorant(commands.Cog):
                 all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
             output.append('`Rating History:\n' + plot(all_past_ratings) + '`\n\n')
 
-            output.append('`Recent matches:`\n')
+            output.append('`Recent Matches:`\n')
             for match in history[-10:]:
                 # match info
                 output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['attackers']]))
-                output.append(f" { match['attacker_score']} - {match['defender_score']} ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['defenders']]))
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_a']]))
+                output.append(f" { match['team_a_score']} - {match['team_b_score']} ")
+                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_b']]))
                 output.append('`\n')
             if len(history) > 10:
                 output.append(f"`... and {len(history)-10} more`")
@@ -660,21 +649,21 @@ class Valorant(commands.Cog):
         guild = ctx.guild
         for vc in guild.voice_channels:
             # ignore voice channels outside of VALORANT
-            if vc.category is not None and vc.category.name.lower() != 'valorant':
+            if vc.category is not None and vc.category.name.lower() != GAME_NAME.lower():
                 continue
-            if vc.name.lower() == 'attackers':
+            if vc.name.lower() == TEAM_A_NAME:
                 await vc.delete()
-                await ctx.send('Attacker voice channel deleted.')
-            elif vc.name.lower() == 'defenders':
+                await ctx.send(f'{TEAM_A_NAME.capitalize()} voice channel deleted.')
+            elif vc.name.lower() == TEAM_B_NAME:
                 await vc.delete()
-                await ctx.send('Defender voice channel deleted.')
+                await ctx.send(f'{TEAM_B_NAME.capitalize()} voice channel deleted.')
         # delete VALORANT category
         for category in guild.categories:
-            if category.name.lower() == 'valorant':
+            if category.name.lower() == GAME_NAME.lower():
                 await category.delete()
-                await ctx.send('VALORANT category deleted.')
-        guild_to_teams[ctx.guild.id] = {'attackers':[], 'defenders':[]}
+                await ctx.send(f'{GAME_NAME} category deleted.')
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
         await ctx.send('Players emptied.')
 
 def setup(bot):
-    bot.add_cog(Valorant(bot))
+    bot.add_cog(Matchmaker(bot))

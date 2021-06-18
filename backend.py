@@ -79,29 +79,29 @@ def set_rating(userid, rating, guildid):
         db.commit()
     print(f'[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
-def record_result(attackers, defenders, attacker_score, defender_score, guildid):
+def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     """Updates the TrueSkill ratings given a result."""
     start = time.time()
-    attacker_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in attackers}
-    defender_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in defenders}
-    if attacker_score > defender_score:
-        attackers_new, defenders_new = rate_with_round_score(attacker_ratings, defender_ratings, attacker_score, defender_score)
+    team_a_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in team_a}
+    team_b_ratings = {str(uid) : get_rating(str(uid), guildid) for uid in team_b}
+    if team_a_score > team_b_score:
+        team_a_new, team_b_new = rate_with_round_score(team_a_ratings, team_b_ratings, team_a_score, team_b_score)
     else:
-        defenders_new, attackers_new = rate_with_round_score(defender_ratings, attacker_ratings, defender_score, attacker_score)
-    for uid in attackers:
-        set_rating(str(uid), attackers_new[str(uid)], guildid)
-    for uid in defenders:
-        set_rating(str(uid), defenders_new[str(uid)], guildid)
+        team_b_new, team_a_new = rate_with_round_score(team_b_ratings, team_a_ratings, team_b_score, team_a_score)
+    for uid in team_a:
+        set_rating(str(uid), team_a_new[str(uid)], guildid)
+    for uid in team_b:
+        set_rating(str(uid), team_b_new[str(uid)], guildid)
     with SqliteDict(str(guildid)+'.db') as db:
         # record in match history
         if 'history' not in db:
             db['history'] = []
         history = db['history']
-        history.append({'attackers': attackers_new, 'defenders': defenders_new, 'attacker_score': attacker_score, 'defender_score': defender_score, 'time': datetime.now(), 'old_ratings': {**attacker_ratings, **defender_ratings}})
+        history.append({'team_a': team_a_new, 'team_b': team_b_new, 'team_a_score': team_a_score, 'team_b_score': team_b_score, 'time': datetime.now(), 'old_ratings': {**team_a_ratings, **team_b_ratings}})
         db['history'] = history
         db.commit()
     print(f'[{guildid}]: record_result in {round(1000*(time.time()-start), 2)}ms')
-    return attacker_ratings, defender_ratings, attackers_new, defenders_new
+    return team_a_ratings, team_b_ratings, team_a_new, team_b_new
 
 def make_teams(players, guildid, pool=10):
     """Make teams based on rating."""
@@ -134,13 +134,13 @@ def get_win_loss(userid, guildid):
     with SqliteDict(str(guildid)+'.db') as db:
         if 'history' in db:
             for match in db['history']:
-                if userid in match['attackers']:
-                    if match['attacker_score'] > match['defender_score']:
+                if userid in match['team_a']:
+                    if match['team_a_score'] > match['team_b_score']:
                         wins += 1
                     else:
                         losses += 1
-                elif userid in match['defenders']:
-                    if match['defender_score'] > match['attacker_score']:
+                elif userid in match['team_b']:
+                    if match['team_b_score'] > match['team_a_score']:
                         wins += 1
                     else:
                         losses += 1
@@ -152,7 +152,7 @@ def time_since_last_match(userid, guildid):
     userid, guildid = str(userid), str(guildid)
     with SqliteDict(guildid+'.db') as db:
         if 'history' in db:
-            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            history = list(filter(lambda x: (userid) in x['team_a'] or (userid) in x['team_b'], db['history']))
             if history:
                 return (datetime.now() - history[-1]['time']).total_seconds()
     return None
@@ -163,7 +163,7 @@ def get_history(guildid, userid=None):
         if 'history' not in db or not db['history']:
             return None
         if userid:
-            history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+            history = list(filter(lambda x: (userid) in x['team_a'] or (userid) in x['team_b'], db['history']))
             history.reverse()
             if not history:
                 return None
@@ -186,7 +186,7 @@ def get_past_ratings(userid, guildid, pad=False):
             if pad:
                 history = db['history']
             else:
-                history = list(filter(lambda x: (userid) in x['attackers'] or (userid) in x['defenders'], db['history']))
+                history = list(filter(lambda x: (userid) in x['team_a'] or (userid) in x['team_b'], db['history']))
             for match in history:
                 if userid in match['old_ratings']:
                     past_ratings.append(match['old_ratings'][userid].mu)
@@ -267,8 +267,8 @@ def undo_last_match(guildid):
         del history[-1]
         db['history'] = history
         db.commit()
-    for player in match['attackers']:
+    for player in match['team_a']:
         set_rating(str(player), match['old_ratings'][player], guildid)
-    for player in match['defenders']:
+    for player in match['team_b']:
         set_rating(str(player), match['old_ratings'][player], guildid)
     return match
