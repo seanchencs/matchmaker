@@ -47,14 +47,14 @@ Use ```/rating``` to view your own rating. Use ```/rating [@player]``` to view a
     ```
     git clone https://github.com/seanchencs/matchmaker.git
     ```
-3. Install Poetry (https://python-poetry.org/docs/) and run poetry install.
+3. Install Poetry (https://python-poetry.org/docs/) and run poetry install to install dependencies.
     ```
     poetry install
     ```
 4. Add your discord bot token as an environment variable (named TOKEN) or add it to .env
-   ```
-   export TOKEN=[your token here]
-   ```
+    ```
+    export TOKEN=[your token here]
+    ```
 5. Edit setup.py with your target game's values and Discord ids.
 6. Start the bot with poetry run.
     ```

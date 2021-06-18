@@ -14,7 +14,8 @@ from tabulate import tabulate
 from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
                      get_past_ratings, get_playerlist, get_ranks, get_rating,
                      get_win_loss, make_teams, record_result, undo_last_match)
-from config import (GAME_NAME, TEAM_A_NAME, TEAM_B_NAME, GUILDS, ADMINS, MAP_POOL)
+from config import (ADMINS, GAME_NAME, GUILDS, MAP_POOL, TEAM_A_NAME,
+                    TEAM_B_NAME)
 
 time_format = '%a %b %-d %-I:%M %p'
 MAP_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in MAP_POOL]
@@ -78,9 +79,9 @@ class Matchmaker(commands.Cog):
         output = [f'React with 🟥 to join {TEAM_A_NAME.capitalize()} or 🟦 to join {TEAM_B_NAME.capitalize()}\n']
         # evaluate teams
         if team_a and team_b:
-            attacker_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_a}
-            defender_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_b}
-            quality = ts.quality([attacker_ratings, defender_ratings])
+            team_a_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_a}
+            team_b_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_b}
+            quality = ts.quality([team_a_ratings, team_b_ratings])
             output.append(f'\n**Predicted Quality: {quality*100: .2f}%**\n\n')
             output.append(f'**{TEAM_A_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_a]) + '\n')
             output.append(f'**{TEAM_B_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_b]))
@@ -166,19 +167,19 @@ class Matchmaker(commands.Cog):
         players = list(players)
         random.shuffle(players)
         team_size = len(players) // 2
-        attackers = players[:team_size]
-        defenders = players[team_size:]
+        team_a = players[:team_size]
+        team_b = players[team_size:]
         # create output
         output = []
-        output += "\nAttackers:\n"
-        for member in attackers:
+        output += f"\n{TEAM_A_NAME.capitalize()}:\n"
+        for member in team_a:
             output += f'\t<@!{member}>'
-        output += "\n\nDefenders:\n"
-        for member in defenders:
+        output += f"\n\n{TEAM_B_NAME.capitalize()}:\n"
+        for member in team_b:
             output += f'\t<@!{member}>'
         # store teams
-        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = attackers
-        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = defenders
+        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = team_a
+        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = team_b
         # send output
         print(f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
@@ -197,25 +198,25 @@ class Matchmaker(commands.Cog):
             await ctx.send('must have **at least 2 players** for rated game')
             return
         # create teams
-        attackers, defenders, quality = make_teams(list(players), ctx.guild.id)
+        team_a, team_b, quality = make_teams(list(players), ctx.guild.id)
         # create output
         output_string = f'Predicted Quality: {quality*100: .2f}%\n'
-        output_string += "\nAttackers:\n"
-        for member in attackers:
+        output_string += f"\n{TEAM_A_NAME.capitalize()}:\n"
+        for member in team_a:
             output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '
-        output_string += "\n\nDefenders:\n"
-        for member in defenders:
+        output_string += f"\n\n{TEAM_B_NAME.capitalize()}:\n"
+        for member in team_b:
             output_string += f'\t<@!{member}>({get_rating(member, ctx.guild.id).mu: .2f}) '
         # store teams
-        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = attackers
-        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = defenders
+        guild_to_teams[ctx.guild.id][TEAM_A_NAME] = team_a
+        guild_to_teams[ctx.guild.id][TEAM_B_NAME] = team_b
         # send output
         print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(output_string)
 
     async def custom(self, ctx: SlashContext):
         # send custom matchmaking message
-        guild_to_custom_msg[ctx.guild.id] = await ctx.send('React with 🟥 to join Attackers or 🟦 to join Defenders')
+        guild_to_custom_msg[ctx.guild.id] = await ctx.send(f'React with 🟥 to join {TEAM_A_NAME.capitalize()} or 🟦 to join {TEAM_B_NAME.capitalize()}')
         await guild_to_custom_msg[ctx.guild.id].add_reaction('🟥')
         await guild_to_custom_msg[ctx.guild.id].add_reaction('🟦')
 
@@ -332,7 +333,7 @@ class Matchmaker(commands.Cog):
                 else:
                     delta_rank = f'{ranks_new[a]} (NEW!)'
                 team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`Attackers - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
+            output.append(f"`{TEAM_A_NAME.capitalize()} - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
             headers = [TEAM_B_NAME, 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             team_b_chart = []

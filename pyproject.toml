@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "repl_python3_CSMatchmaker"
-version = "0.1.0"
+name = "matchmaker_bot"
+version = "0.2.0"
 description = ""
 authors = ["seanchencs <<>>"]
 
@@ -11,7 +11,6 @@ trueskill = "^0.4.5"
 discord = "^1.0.1"
 flask = "^1.1.2"
 discord-py-slash-command = "^1.2.2"
-pytz = "^2021.1"
 asciichartpy = "^1.5.25"
 python-dotenv = "^0.17.1"
 tabulate = "^0.8.9"
