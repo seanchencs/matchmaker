@@ -30,6 +30,7 @@ env.make_as_global()
 async def on_ready():
     print('Logged in as {0.user}'.format(bot))
 
-bot.load_extension('test_cog')
-bot.load_extension('valorant_cog')
+if os.path.isfile('test_cog.py'):
+    bot.load_extension('test_cog')
+bot.load_extension('matchmaker_cog')
 bot.run(os.getenv('TOKEN'))
