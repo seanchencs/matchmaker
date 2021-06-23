@@ -621,6 +621,9 @@ class Matchmaker(commands.Cog):
         else:
             # guild-wide match history
             history = get_history(ctx.guild.id)
+            if not history:
+                await ctx.send('No recorded matches.')
+                return
             all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in get_playerlist(ctx.guild.id)]
 
             # scaling

@@ -28,6 +28,8 @@ def get_playerlist(guildid):
     """Get list of all userids in guild with ratings."""
     players = []
     with SqliteDict(str(guildid)+'.db') as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
         players = [uid for uid in db['ratings']]
     return players
 
