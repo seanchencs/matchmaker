@@ -468,7 +468,7 @@ class Matchmaker(commands.Cog):
                     output.append([last[1], member.name, f'{item[1].mu: .4f} ± {item[1].sigma: .2f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
                 else:
                     output.append([rank, member.name, f'{item[1].mu: .4f} ± {item[1].sigma: .2f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
-                last = item[1], rank
+                    last = item[1], rank
         await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
@@ -506,12 +506,12 @@ class Matchmaker(commands.Cog):
         count = 0
         for a in team_a:
             member = gd.get_member(a)
-            if member.voice is not None:
+            if member and member.voice is not None:
                 count += 1
                 await member.move_to(a_vc)
         for b in team_b:
             member = gd.get_member(b)
-            if member.voice is not None:
+            if member and member.voice is not None:
                 count += 1
                 await member.move_to(b_vc)
         await ctx.send(f"{count} player{'s' if count > 1 else ''} moved.")
@@ -621,6 +621,9 @@ class Matchmaker(commands.Cog):
         else:
             # guild-wide match history
             history = get_history(ctx.guild.id)
+            if not history:
+                await ctx.send('No recorded matches.')
+                return
             all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in get_playerlist(ctx.guild.id)]
 
             # scaling

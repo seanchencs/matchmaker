@@ -9,7 +9,6 @@ from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score
 
-
 # TrueSkill DB helper functions
 def delete_db(guildid):
     guildid = str(guildid)
@@ -28,6 +27,8 @@ def get_playerlist(guildid):
     """Get list of all userids in guild with ratings."""
     players = []
     with SqliteDict(str(guildid)+'.db') as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
         players = [uid for uid in db['ratings']]
     return players
 
@@ -164,16 +165,13 @@ def get_history(guildid, userid=None):
         if userid:
             history = list(filter(lambda x: (userid) in x['team_a'] or (userid) in x['team_b'], db['history']))
             history.reverse()
-            if not history:
-                return None
-            return history
         else:
             # guild-wide match history
             history = db['history']
             history.reverse()
-            if not history:
-                return None
-            return history
+    if not history:
+        return None
+    return history
 
 def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""
@@ -223,6 +221,7 @@ def get_ranks(players, guildid, metric='exposure'):
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
+    # TODO: replace with get_ranks() implementation
     start = time.time()
     guildid = str(guildid)
     with SqliteDict(str(guildid)+'.db') as db:
