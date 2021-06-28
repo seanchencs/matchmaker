@@ -5,3 +5,4 @@
 .vscode/
 todo
 __pycache__/
+config.py
