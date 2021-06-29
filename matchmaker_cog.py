@@ -500,12 +500,12 @@ class Matchmaker(commands.Cog):
         team_b = guild_to_teams[gd.id][TEAM_B_NAME]
         count = 0
         for a in team_a:
-            member = gd.get_member(a)
+            member = gd.get_member(int(a))
             if member and member.voice is not None:
                 count += 1
                 await member.move_to(a_vc)
         for b in team_b:
-            member = gd.get_member(b)
+            member = gd.get_member(int(b))
             if member and member.voice is not None:
                 count += 1
                 await member.move_to(b_vc)
