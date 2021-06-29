@@ -448,27 +448,22 @@ class Matchmaker(commands.Cog):
         )
     ])
     async def _leaderboard(self, ctx: SlashContext, metric='exposure'):
-        if metric == 'mean':
-            leaderboard = get_leaderboard(ctx.guild.id)
-        elif metric == 'exposure':
-            leaderboard = get_leaderboard_by_exposure(ctx.guild.id)
+        ranks = get_ranks(get_playerlist(ctx.guild.id), ctx.guild.id, metric=metric)
+        leaderboard = sorted(ranks.keys(), key=lambda x: ranks[x])
         if not leaderboard:
             await ctx.send('No Ranked Players.')
             return
         output = []
         headers = ['Rank', 'Name', 'Rating', 'Exposure', 'Win/Loss']
-        rank = 0
-        last = None, 0    # rating, rank
         for item in leaderboard:
-            member = ctx.guild.get_member(int(item[0]))
+            member = ctx.guild.get_member(int(item))
             if member:
-                w, l = get_win_loss(item[0], ctx.guild.id)
-                rank += 1
-                if last[0] and ((metric == 'exposure' and isclose(ts.expose(item[1]), ts.expose(last[0]))) or (metric == 'mean' and isclose(item[1], last[0]))):
-                    output.append([last[1], member.name, f'{item[1].mu: .4f} ± {item[1].sigma: .2f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
-                else:
-                    output.append([rank, member.name, f'{item[1].mu: .4f} ± {item[1].sigma: .2f}', round(ts.expose(item[1]), 4), f'{w}W {l}L'])
-                    last = item[1], rank
+                rank = ranks[item]
+                name = member.name
+                rating = get_rating(item, ctx.guild.id)
+                exposure = ts.expose(rating)
+                w, l = get_win_loss(item, ctx.guild.id)
+                output.append([rank, name, f'{rating.mu: .4f} ± {rating.sigma: .2f}', round(exposure, 4), f'{w}W {l}L'])
         await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
@@ -505,12 +500,12 @@ class Matchmaker(commands.Cog):
         team_b = guild_to_teams[gd.id][TEAM_B_NAME]
         count = 0
         for a in team_a:
-            member = gd.get_member(a)
+            member = gd.get_member(int(a))
             if member and member.voice is not None:
                 count += 1
                 await member.move_to(a_vc)
         for b in team_b:
-            member = gd.get_member(b)
+            member = gd.get_member(int(b))
             if member and member.voice is not None:
                 count += 1
                 await member.move_to(b_vc)
