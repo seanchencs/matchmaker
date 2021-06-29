@@ -209,10 +209,10 @@ def get_ranks(players, guildid, metric='exposure'):
         output = {}
         for item in leaderboard:
             rank += 1
-            if metric == 'exposure' and not isclose(ts.expose(item[1]), last):
+            if metric == 'exposure' and not isclose(ts.expose(item[1]), last, abs_tol=0.0001):
                 last = ts.expose(item[1])
                 last_rank = rank
-            elif metric == 'mean' and not isclose(item[1].mu, last):
+            elif metric == 'mean' and not isclose(item[1].mu, last, abs_tol=0.0001):
                 last = item[1].mu
                 last_rank = rank
             if item[0] in players:
@@ -221,7 +221,6 @@ def get_ranks(players, guildid, metric='exposure'):
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
-    # TODO: replace with get_ranks() implementation
     start = time.time()
     guildid = str(guildid)
     with SqliteDict(str(guildid)+'.db') as db:
