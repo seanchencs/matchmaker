@@ -1,6 +1,6 @@
 import random
 import time
-from math import ceil, isclose
+from math import ceil
 
 import trueskill as ts
 from asciichartpy import plot
@@ -11,9 +11,9 @@ from discord_slash.utils.manage_commands import (create_choice, create_option,
                                                  create_permission)
 from tabulate import tabulate
 
-from backend import (get_history, get_leaderboard, get_leaderboard_by_exposure,
-                     get_past_ratings, get_playerlist, get_ranks, get_rating,
-                     get_win_loss, make_teams, record_result, undo_last_match)
+from backend import (get_history, get_past_ratings, get_playerlist, get_ranks,
+                     get_rating, get_win_loss, make_teams, record_result,
+                     undo_last_match)
 from config import (ADMINS, GAME_NAME, GUILDS, MAP_POOL, TEAM_A_NAME,
                     TEAM_B_NAME)
 
@@ -21,7 +21,7 @@ time_format = '%a %b %-d %-I:%M %p'
 MAP_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in MAP_POOL]
 ADMIN_PERMISSIONS = {admin_id: create_permission(guild_id, SlashCommandPermissionType.USER, True) for admin_id in ADMINS for guild_id in GUILDS}
 
-# dicts for guild-local variables
+# in-memory dicts for guild-local variables (not persistent)
 guild_to_start_msg = {} # message id of start message
 guild_to_custom_msg = {} # custom matchmaking message
 guild_to_teams = {} # {TEAM_A_NAME: [list of uids], TEAM_B_NAME: [list of uids]}
