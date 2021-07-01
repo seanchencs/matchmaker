@@ -107,6 +107,20 @@ def set_rating(userid, rating, guildid):
         db.commit()
     print(f'[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms')
 
+def set_ratings(user_ratings, guildid):
+    """Set the rating of multiple users."""
+    start = time.time()
+    guildid = str(guildid)
+    with SqliteDict(str(guildid)+'.db') as db:
+        if 'ratings' not in db:
+            db['ratings'] = {}
+        ratings = db['ratings']
+        for userid in user_ratings:
+            ratings[str(userid)] = user_ratings[userid].mu, user_ratings[userid].sigma
+        db['ratings'] = ratings
+        db.commit()
+    print(f'[{guildid}]: set_ratings for {len(user_ratings)} users in {round(1000*(time.time()-start), 2)}ms')
+
 def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     """Updates the TrueSkill ratings given a result."""
     start = time.time()
@@ -116,18 +130,18 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
         team_a_new, team_b_new = rate_with_round_score(team_a_ratings, team_b_ratings, team_a_score, team_b_score)
     else:
         team_b_new, team_a_new = rate_with_round_score(team_b_ratings, team_a_ratings, team_b_score, team_a_score)
-    for uid in team_a:
-        set_rating(str(uid), team_a_new[str(uid)], guildid)
-    for uid in team_b:
-        set_rating(str(uid), team_b_new[str(uid)], guildid)
+    set_ratings(team_a_new, guildid)
+    set_ratings(team_b_new, guildid)
+
+    # record in match history
     with SqliteDict(str(guildid)+'.db') as db:
-        # record in match history
         if 'history' not in db:
             db['history'] = []
         history = db['history']
         history.append({'team_a': team_a_new, 'team_b': team_b_new, 'team_a_score': team_a_score, 'team_b_score': team_b_score, 'time': datetime.now(), 'old_ratings': {**team_a_ratings, **team_b_ratings}})
         db['history'] = history
         db.commit()
+
     print(f'[{guildid}]: record_result in {round(1000*(time.time()-start), 2)}ms')
     return team_a_ratings, team_b_ratings, team_a_new, team_b_new
 
@@ -149,7 +163,7 @@ def make_teams(players, guildid, pool=10):
             team_b = list(t2.keys())
             best_quality = quality
     # sort teams by rating
-    # team_a, team_b = sorted(team_a, key=lambda x : get_rating(x, guildid)), sorted(team_b, key=lambda x : get_rating(x, guildid))
+    team_a, team_b = sorted(team_a, key=lambda x : get_rating(x, guildid)), sorted(team_b, key=lambda x : get_rating(x, guildid))
     print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
     return team_a, team_b, best_quality
 
