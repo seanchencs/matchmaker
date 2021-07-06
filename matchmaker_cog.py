@@ -18,16 +18,21 @@ from config import (ADMINS, GAME_NAME, GUILDS, MAP_POOL, TEAM_A_NAME,
                     TEAM_B_NAME)
 
 time_format = '%a %b %-d %-I:%M %p'
-MAP_SLASH_CHOICES = [create_choice(name=map_name, value=map_name) for map_name in MAP_POOL]
-ADMIN_PERMISSIONS = {admin_id: create_permission(guild_id, SlashCommandPermissionType.USER, True) for admin_id in ADMINS for guild_id in GUILDS}
+MAP_SLASH_CHOICES = [create_choice(
+    name=map_name, value=map_name) for map_name in MAP_POOL]
+ADMIN_PERMISSIONS = {admin_id: create_permission(
+    guild_id, SlashCommandPermissionType.USER, True) for admin_id in ADMINS for guild_id in GUILDS}
 
 # in-memory dicts for guild-local variables (not persistent)
-guild_to_start_msg = {} # message id of start message
-guild_to_custom_msg = {} # custom matchmaking message
-guild_to_teams = {} # {TEAM_A_NAME: [list of uids], TEAM_B_NAME: [list of uids]}
-guild_to_last_result_time = {} # time of last recorded result (for record cooldown)
-guild_to_remaining_maps = {} # list of remaining maps in veto process
-guild_to_next_team_to_veto = {} # TEAM_A_NAME or TEAM_B_NAME next to veto
+guild_to_start_msg = {}  # message id of start message
+guild_to_custom_msg = {}  # custom matchmaking message
+# {TEAM_A_NAME: [list of uids], TEAM_B_NAME: [list of uids]}
+guild_to_teams = {}
+# time of last recorded result (for record cooldown)
+guild_to_last_result_time = {}
+guild_to_remaining_maps = {}  # list of remaining maps in veto process
+guild_to_next_team_to_veto = {}  # TEAM_A_NAME or TEAM_B_NAME next to veto
+
 
 class Matchmaker(commands.Cog):
     def __init__(self, bot):
@@ -60,7 +65,9 @@ class Matchmaker(commands.Cog):
         for reaction in start_msg.reactions:
             users = await reaction.users().flatten()
             players.update((user.id for user in users))
-        output_message = "React to this message if you're playing" + f' ({len(players)})' + ''.join([f'\t<@!{member}>' for member in players] )
+        output_message = "React to this message if you're playing" + \
+            f' ({len(players)})' + \
+            ''.join([f'\t<@!{member}>' for member in players])
         await start_msg.edit(content=output_message)
 
     async def update_custom_message(self, payload):
@@ -72,20 +79,28 @@ class Matchmaker(commands.Cog):
         for reaction in start_msg.reactions:
             if reaction.emoji == '🟥':
                 team_a = await reaction.users().flatten()
-                team_a = [str(user.id) for user in team_a if user.id != self.bot.user.id]
+                team_a = [str(user.id)
+                          for user in team_a if user.id != self.bot.user.id]
             elif reaction.emoji == '🟦':
                 team_b = await reaction.users().flatten()
-                team_b = [str(user.id) for user in team_b if user.id != self.bot.user.id and str(user.id) not in team_a]
-        output = [f'React with 🟥 to join {TEAM_A_NAME.capitalize()} or 🟦 to join {TEAM_B_NAME.capitalize()}\n']
+                team_b = [str(user.id) for user in team_b if user.id !=
+                          self.bot.user.id and str(user.id) not in team_a]
+        output = [
+            f'React with 🟥 to join {TEAM_A_NAME.capitalize()} or 🟦 to join {TEAM_B_NAME.capitalize()}\n']
         # evaluate teams
         if team_a and team_b:
-            team_a_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_a}
-            team_b_ratings = {str(uid) : get_rating(uid, payload.guild_id) for uid in team_b}
+            team_a_ratings = {str(uid): get_rating(
+                uid, payload.guild_id) for uid in team_a}
+            team_b_ratings = {str(uid): get_rating(
+                uid, payload.guild_id) for uid in team_b}
             quality = ts.quality([team_a_ratings, team_b_ratings])
             output.append(f'\n**Predicted Quality: {quality*100: .2f}%**\n\n')
-            output.append(f'**{TEAM_A_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_a]) + '\n')
-            output.append(f'**{TEAM_B_NAME.capitalize()}**: ' + ' '.join([f'<@!{member}>' for member in team_b]))
-            guild_to_teams[payload.guild_id] = {TEAM_A_NAME: team_a, TEAM_B_NAME: team_b}
+            output.append(f'**{TEAM_A_NAME.capitalize()}**: ' +
+                          ' '.join([f'<@!{member}>' for member in team_a]) + '\n')
+            output.append(f'**{TEAM_B_NAME.capitalize()}**: ' +
+                          ' '.join([f'<@!{member}>' for member in team_b]))
+            guild_to_teams[payload.guild_id] = {
+                TEAM_A_NAME: team_a, TEAM_B_NAME: team_b}
         await guild_to_custom_msg[payload.guild_id].edit(content=''.join(output))
 
     @commands.Cog.listener()
@@ -157,7 +172,7 @@ class Matchmaker(commands.Cog):
         # read reacts and make teams randomly without ranks
         start_time = time.time()
         # read reacts
-        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME: [], TEAM_B_NAME: []}
         start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
         players = set()
         for reaction in start_msg.reactions:
@@ -181,13 +196,14 @@ class Matchmaker(commands.Cog):
         guild_to_teams[ctx.guild.id][TEAM_A_NAME] = team_a
         guild_to_teams[ctx.guild.id][TEAM_B_NAME] = team_b
         # send output
-        print(f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
+        print(
+            f'[{ctx.guild.id}]: Unrated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(''.join(output))
 
     async def rated(self, ctx: SlashContext):
         start_time = time.time()
         # read reacts
-        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME: [], TEAM_B_NAME: []}
         start_msg = await ctx.channel.fetch_message(guild_to_start_msg[ctx.guild.id].id)
         players = set()
         for reaction in start_msg.reactions:
@@ -211,7 +227,8 @@ class Matchmaker(commands.Cog):
         guild_to_teams[ctx.guild.id][TEAM_A_NAME] = team_a
         guild_to_teams[ctx.guild.id][TEAM_B_NAME] = team_b
         # send output
-        print(f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
+        print(
+            f'[{ctx.guild.id}]: Rated Game created in {round(time.time()-start_time, 4)}s')
         await ctx.send(output_string)
 
     async def custom(self, ctx: SlashContext):
@@ -251,7 +268,7 @@ class Matchmaker(commands.Cog):
             required=True,
         ),
     ])
-    async def _record(self, ctx: SlashContext, winner:str, winning_score:int, losing_score:int, description='matchmake game from reacts to /start with option for MMR'):
+    async def _record(self, ctx: SlashContext, winner: str, winning_score: int, losing_score: int, description='matchmake game from reacts to /start with option for MMR'):
         if ctx.guild.id in guild_to_last_result_time and time.time() - guild_to_last_result_time[ctx.guild.id] < 60:
             await ctx.send(f'Result already recorded. Wait {round(60 - (time.time() - guild_to_last_result_time[ctx.guild.id]))}s before recording another result.')
             return
@@ -273,13 +290,16 @@ class Matchmaker(commands.Cog):
         else:
             a, b = guild_to_teams[ctx.guild.id][TEAM_A_NAME], guild_to_teams[ctx.guild.id][TEAM_B_NAME]
             ranks_old = get_ranks(a+b, ctx.guild.id)
-            team_a_old, team_b_old, team_a_new, team_b_new = record_result(a, b, winning_score, losing_score, ctx.guild.id)
+            team_a_old, team_b_old, team_a_new, team_b_new = record_result(
+                a, b, winning_score, losing_score, ctx.guild.id)
             ranks_new = get_ranks(a+b, ctx.guild.id)
 
             output = []
-            output.append(f'**Win for {TEAM_A_NAME.capitalize()} Recorded.**\n\n')
+            output.append(
+                f'**Win for {TEAM_A_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = [TEAM_A_NAME.capitalize(), 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = [TEAM_A_NAME.capitalize(), 'ΔRating',
+                       'ΔExposure', 'ΔRank']
             team_a_chart = []
             for a in team_a_new:
                 member = ctx.guild.get_member(int(a))
@@ -290,10 +310,13 @@ class Matchmaker(commands.Cog):
                     delta_rank = f'{ranks_old[a]}->{ranks_new[a]}'
                 else:
                     delta_rank = f'{ranks_new[a]} (NEW!)'
-                team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`{TEAM_A_NAME.capitalize()} - {winning_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
+                team_a_chart.append(
+                    [name, delta_rating, delta_exposure, delta_rank])
+            output.append(
+                f"`{TEAM_A_NAME.capitalize()} - {winning_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = [TEAM_B_NAME.capitalize(), 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = [TEAM_B_NAME.capitalize(), 'ΔRating',
+                       'ΔExposure', 'ΔRank']
             team_b_chart = []
             for b in team_b_new:
                 member = ctx.guild.get_member(int(b))
@@ -304,8 +327,10 @@ class Matchmaker(commands.Cog):
                     delta_rank = f'{ranks_old[b]}->{ranks_new[b]}'
                 else:
                     delta_rank = f'{ranks_new[b]} (NEW!)'
-                team_b_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`{TEAM_B_NAME.capitalize()} - {losing_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
+                team_b_chart.append(
+                    [name, delta_rating, delta_exposure, delta_rank])
+            output.append(
+                f"`{TEAM_B_NAME.capitalize()} - {losing_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
 
@@ -315,13 +340,16 @@ class Matchmaker(commands.Cog):
         else:
             a, b = guild_to_teams[ctx.guild.id][TEAM_A_NAME], guild_to_teams[ctx.guild.id][TEAM_B_NAME]
             ranks_old = get_ranks(a+b, ctx.guild.id)
-            team_a_old, team_b_old, team_a_new, team_b_new = record_result(a, b, losing_score, winning_score, ctx.guild.id)
+            team_a_old, team_b_old, team_a_new, team_b_new = record_result(
+                a, b, losing_score, winning_score, ctx.guild.id)
             ranks_new = get_ranks(a+b, ctx.guild.id)
 
             output = []
-            output.append(f'**Win for {TEAM_B_NAME.capitalize()} Recorded.**\n\n')
+            output.append(
+                f'**Win for {TEAM_B_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = [TEAM_A_NAME.capitalize(), 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            headers = [TEAM_A_NAME.capitalize(), 'Δ Rating',
+                       'Δ Exposure', 'Δ Rank']
             team_a_chart = []
             for a in team_a_new:
                 member = ctx.guild.get_member(int(a))
@@ -332,10 +360,13 @@ class Matchmaker(commands.Cog):
                     delta_rank = f'{ranks_old[a]}->{ranks_new[a]}'
                 else:
                     delta_rank = f'{ranks_new[a]} (NEW!)'
-                team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`{TEAM_A_NAME.capitalize()} - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
+                team_a_chart.append(
+                    [name, delta_rating, delta_exposure, delta_rank])
+            output.append(
+                f"`{TEAM_A_NAME.capitalize()} - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = [TEAM_B_NAME.capitalize(), 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            headers = [TEAM_B_NAME.capitalize(), 'Δ Rating',
+                       'Δ Exposure', 'Δ Rank']
             team_b_chart = []
             for b in team_b_new:
                 member = ctx.guild.get_member(int(b))
@@ -346,8 +377,10 @@ class Matchmaker(commands.Cog):
                     delta_rank = f'{ranks_old[b]}->{ranks_new[b]}'
                 else:
                     delta_rank = f'{ranks_new[b]} (NEW!)'
-                team_b_chart.append([name, delta_rating, delta_exposure, delta_rank])
-            output.append(f"`{TEAM_B_NAME.capitalize()} - {winning_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
+                team_b_chart.append(
+                    [name, delta_rating, delta_exposure, delta_rank])
+            output.append(
+                f"`{TEAM_B_NAME.capitalize()} - {winning_score}:\n{tabulate(team_b_chart, headers=headers, tablefmt='psql')}`\n")
             # send output
             await ctx.send(''.join(output))
 
@@ -379,8 +412,10 @@ class Matchmaker(commands.Cog):
                 return
             guild_to_remaining_maps[ctx.guild.id] = MAP_POOL.copy()
             # next to veto
-            a_total = sum([get_rating(a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id][TEAM_A_NAME]])
-            d_total = sum([get_rating(b, ctx.guild.id).mu for b in guild_to_teams[ctx.guild.id][TEAM_B_NAME]])
+            a_total = sum([get_rating(
+                a, ctx.guild.id).mu for a in guild_to_teams[ctx.guild.id][TEAM_A_NAME]])
+            d_total = sum([get_rating(
+                b, ctx.guild.id).mu for b in guild_to_teams[ctx.guild.id][TEAM_B_NAME]])
             if a_total > d_total:
                 guild_to_next_team_to_veto[ctx.guild.id] = TEAM_B_NAME
             else:
@@ -448,7 +483,8 @@ class Matchmaker(commands.Cog):
         )
     ])
     async def _leaderboard(self, ctx: SlashContext, metric='exposure'):
-        ranks = get_ranks(get_playerlist(ctx.guild.id), ctx.guild.id, metric=metric)
+        ranks = get_ranks(get_playerlist(ctx.guild.id),
+                          ctx.guild.id, metric=metric)
         leaderboard = sorted(ranks.keys(), key=lambda x: ranks[x])
         if not leaderboard:
             await ctx.send('No Ranked Players.')
@@ -463,7 +499,8 @@ class Matchmaker(commands.Cog):
                 rating = get_rating(item, ctx.guild.id)
                 exposure = ts.expose(rating)
                 w, l = get_win_loss(item, ctx.guild.id)
-                output.append([rank, name, f'{rating.mu: .4f} ± {rating.sigma: .2f}', round(exposure, 4), f'{w}W {l}L'])
+                output.append([rank, name, f'{rating.mu: .4f} ± {rating.sigma: .2f}', round(
+                    exposure, 4), f'{w}W {l}L'])
         await ctx.send(f"`Leaderboard (by {metric}):\n{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
 
     @cog_ext.cog_slash(name='move', description='move players to team voice channels', guild_ids=GUILDS)
@@ -526,7 +563,6 @@ class Matchmaker(commands.Cog):
                             await player.move_to(vc2)
                         await ctx.send('✅')
 
-
     @cog_ext.cog_slash(name='rating', guild_ids=GUILDS, description='find rating of specified player', options=[
         create_option(
             name='player',
@@ -550,7 +586,8 @@ class Matchmaker(commands.Cog):
             rating = get_rating(p, ctx.guild.id)
             exposure = ts.expose(rating)
             w, l = get_win_loss(p, ctx.guild.id)
-            rating_chart.append([name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
+            rating_chart.append(
+                [name, rank, f'{rating.mu: .4f} ± {rating.sigma: .2f}', f'{exposure: .4f}', f'{w}W {l}L'])
         await ctx.send(f"`\n{tabulate(rating_chart, headers=headers, tablefmt='psql')}\n`")
 
     @cog_ext.cog_slash(name='undo', description='undo the last recorded result', guild_ids=GUILDS, permissions=ADMIN_PERMISSIONS)
@@ -571,8 +608,8 @@ class Matchmaker(commands.Cog):
             description='user to find history for',
             option_type=6,
             required=False
-            )
-        ]
+        )
+    ]
     )
     async def _history(self, ctx: SlashContext, user=None):
         output = []
@@ -588,7 +625,8 @@ class Matchmaker(commands.Cog):
             past_ratings = get_past_ratings(userid, ctx.guild.id)
             # scaling
             if len(past_ratings) < 30:
-                past_ratings = [val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))]
+                past_ratings = [val for val in past_ratings for _ in range(
+                    0, ceil(30/len(past_ratings)))]
             elif len(past_ratings) > 60:
                 past_ratings = past_ratings[::len(past_ratings)//30]
             output.append('`Rating History:\n' + plot(past_ratings) + '`\n')
@@ -604,13 +642,18 @@ class Matchmaker(commands.Cog):
                 recent = history
             for match in recent:
                 output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_a']]))
-                output.append(f" { match['team_a_score']} - {match['team_b_score']} ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_b']]))
+                output.append(', '.join([ctx.guild.get_member(
+                    int(uid)).name for uid in match['team_a']]))
+                output.append(
+                    f" { match['team_a_score']} - {match['team_b_score']} ")
+                output.append(', '.join([ctx.guild.get_member(
+                    int(uid)).name for uid in match['team_b']]))
                 if userid in match['team_a']:
-                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_a'][userid].mu: .2f})`\n")
+                    output.append(
+                        f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_a'][userid].mu: .2f})`\n")
                 else:
-                    output.append(f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_b'][userid].mu: .2f})`\n")
+                    output.append(
+                        f" ({match['old_ratings'][userid].mu: .2f} -> {match['team_b'][userid].mu: .2f})`\n")
             if len(history) > 10:
                 output.append(f"`... and {len(history)-10} more`")
         else:
@@ -619,22 +662,29 @@ class Matchmaker(commands.Cog):
             if not history:
                 await ctx.send('No recorded matches.')
                 return
-            all_past_ratings = [get_past_ratings(playerid, ctx.guild.id, pad=True) for playerid in get_playerlist(ctx.guild.id)]
+            all_past_ratings = [get_past_ratings(
+                playerid, ctx.guild.id, pad=True) for playerid in get_playerlist(ctx.guild.id)]
 
             # scaling
             if all_past_ratings and len(all_past_ratings[0]) < 30:
-                all_past_ratings = [[val for val in past_ratings for _ in range(0, ceil(30/len(past_ratings)))] for past_ratings in all_past_ratings]
+                all_past_ratings = [[val for val in past_ratings for _ in range(
+                    0, ceil(30/len(past_ratings)))] for past_ratings in all_past_ratings]
             if all_past_ratings and len(all_past_ratings[0]) > 60:
-                all_past_ratings = [past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
-            output.append('`Rating History:\n' + plot(all_past_ratings) + '`\n\n')
+                all_past_ratings = [
+                    past_ratings[::len(past_ratings)//30] for past_ratings in all_past_ratings]
+            output.append('`Rating History:\n' +
+                          plot(all_past_ratings) + '`\n\n')
 
             output.append('`Recent Matches:`\n')
             for match in history[-10:]:
                 # match info
                 output.append(f"`{match['time'].strftime(time_format)}: ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_a']]))
-                output.append(f" { match['team_a_score']} - {match['team_b_score']} ")
-                output.append(', '.join([ctx.guild.get_member(int(uid)).name for uid in match['team_b']]))
+                output.append(', '.join([ctx.guild.get_member(
+                    int(uid)).name for uid in match['team_a']]))
+                output.append(
+                    f" { match['team_a_score']} - {match['team_b_score']} ")
+                output.append(', '.join([ctx.guild.get_member(
+                    int(uid)).name for uid in match['team_b']]))
                 output.append('`\n')
             if len(history) > 10:
                 output.append(f"`... and {len(history)-10} more`")
@@ -659,8 +709,9 @@ class Matchmaker(commands.Cog):
             if category.name.lower() == GAME_NAME.lower():
                 await category.delete()
                 await ctx.send(f'{GAME_NAME} category deleted.')
-        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME:[], TEAM_B_NAME:[]}
+        guild_to_teams[ctx.guild.id] = {TEAM_A_NAME: [], TEAM_B_NAME: []}
         await ctx.send('Players emptied.')
+
 
 def setup(bot):
     bot.add_cog(Matchmaker(bot))
