@@ -7,7 +7,7 @@ from math import isclose
 import trueskill as ts
 from sqlitedict import SqliteDict
 
-from CustomTrueSkill import rate_with_round_score
+from CustomTrueSkill import rate_with_round_score, win_probability
 
 # TrueSkill DB helper functions
 def delete_db(guildid):
@@ -37,6 +37,7 @@ def get_rating(userid, guildid):
     start = time.time()
     userid = str(userid)
     guildid = str(guildid)
+    rating = None
 
     # check db
     with SqliteDict(str(guildid)+'.db', autocommit=True) as db:
@@ -47,13 +48,12 @@ def get_rating(userid, guildid):
             mu, sigma = ratings[userid]
             current_rating = ts.Rating(float(mu), float(sigma))
             rating = ts.Rating(current_rating.mu, min(current_rating.sigma + get_decay(userid, guildid), ts.global_env().sigma))
-            print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
-            return rating
-        new_rating = ts.Rating()
-        ratings[userid] = new_rating.mu, new_rating.sigma
+        else:
+            rating = ts.Rating()
+            ratings[userid] = rating.mu, rating.sigma
 
     print(f'[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms')
-    return new_rating
+    return rating
 
 def get_ratings(users, guildid):
     """Returns dictionary of id to rating for users."""
@@ -164,7 +164,10 @@ def make_teams(players, guildid, pool=10):
             best_quality = quality
     # sort teams by rating
     team_a, team_b = sorted(team_a, key=lambda x : get_rating(x, guildid)), sorted(team_b, key=lambda x : get_rating(x, guildid))
-    print(f'[{guildid}]: make_teams for in {round(1000*(time.time()-start), 2)}ms')
+    a_win = win_probability([player_ratings[str(uid)] for uid in team_a], [player_ratings[str(uid)] for uid in team_b])
+    b_win = win_probability([player_ratings[str(uid)] for uid in team_b], [player_ratings[str(uid)] for uid in team_a])
+    print(f'[{guildid}]: team_1: {a_win*100: .2f}%, team_2: {b_win*100: .2f}%, draw: {(1-a_win-b_win)*100: .2f}%')
+    print(f'[{guildid}]: make_teams for in {1000*(time.time()-start): .2f}ms')
     return team_a, team_b, best_quality
 
 def get_win_loss(userid, guildid):
@@ -197,7 +200,7 @@ def time_since_last_match(userid, guildid, current_time=datetime.now()):
         if 'history' in db:
             history = db['history']
             if history:
-                for r_idx, match in enumerate(reversed(history)):
+                for _, match in enumerate(reversed(history)):
                     if userid in match['team_a'] or userid in match['team_b']:
                         output = (current_time-match['time']).total_seconds()
                         break
