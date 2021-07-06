@@ -279,7 +279,7 @@ class Matchmaker(commands.Cog):
             output = []
             output.append(f'**Win for {TEAM_A_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = [TEAM_A_NAME, 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = [TEAM_A_NAME.capitalize(), 'ΔRating', 'ΔExposure', 'ΔRank']
             team_a_chart = []
             for a in team_a_new:
                 member = ctx.guild.get_member(int(a))
@@ -293,7 +293,7 @@ class Matchmaker(commands.Cog):
                 team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
             output.append(f"`{TEAM_A_NAME.capitalize()} - {winning_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = [TEAM_B_NAME, 'ΔRating', 'ΔExposure', 'ΔRank']
+            headers = [TEAM_B_NAME.capitalize(), 'ΔRating', 'ΔExposure', 'ΔRank']
             team_b_chart = []
             for b in team_b_new:
                 member = ctx.guild.get_member(int(b))
@@ -321,7 +321,7 @@ class Matchmaker(commands.Cog):
             output = []
             output.append(f'**Win for {TEAM_B_NAME.capitalize()} Recorded.**\n\n')
             # charts
-            headers = [TEAM_A_NAME, 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            headers = [TEAM_A_NAME.capitalize(), 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             team_a_chart = []
             for a in team_a_new:
                 member = ctx.guild.get_member(int(a))
@@ -335,7 +335,7 @@ class Matchmaker(commands.Cog):
                 team_a_chart.append([name, delta_rating, delta_exposure, delta_rank])
             output.append(f"`{TEAM_A_NAME.capitalize()} - {losing_score}:\n{tabulate(team_a_chart, headers=headers, tablefmt='psql')}`\n\n")
 
-            headers = [TEAM_B_NAME, 'Δ Rating', 'Δ Exposure', 'Δ Rank']
+            headers = [TEAM_B_NAME.capitalize(), 'Δ Rating', 'Δ Exposure', 'Δ Rank']
             team_b_chart = []
             for b in team_b_new:
                 member = ctx.guild.get_member(int(b))
