@@ -6,3 +6,4 @@
 todo
 __pycache__/
 config.py
+profiling.prof
