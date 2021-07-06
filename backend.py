@@ -163,7 +163,7 @@ def make_teams(players, guildid, pool=10):
             team_b = list(t2.keys())
             best_quality = quality
     # sort teams by rating
-    team_a, team_b = sorted(team_a, key=lambda x : get_rating(x, guildid)), sorted(team_b, key=lambda x : get_rating(x, guildid))
+    team_a, team_b = sorted(team_a, key=lambda x : player_ratings[x]), sorted(team_b, key=lambda x : player_ratings[x])
     a_win = win_probability([player_ratings[str(uid)] for uid in team_a], [player_ratings[str(uid)] for uid in team_b])
     b_win = win_probability([player_ratings[str(uid)] for uid in team_b], [player_ratings[str(uid)] for uid in team_a])
     print(f'[{guildid}]: team_1: {a_win*100: .2f}%, team_2: {b_win*100: .2f}%, draw: {(1-a_win-b_win)*100: .2f}%')
