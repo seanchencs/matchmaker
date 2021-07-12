@@ -91,10 +91,12 @@ def get_ratings(users, guildid):
     return output
 
 
-def get_decay(userid, guildid, current_time=datetime.now()):
+def get_decay(userid, guildid, current_time=None):
     """Returns the amount of decay for a user, based on time since last match."""
     start = time.time()
     userid, guildid = str(userid), str(guildid)
+    if not current_time:
+        current_time = datetime.now()
     last_match = time_since_last_match(
         userid, guildid, current_time=current_time)
     if last_match:
@@ -228,11 +230,11 @@ def time_since_last_match(userid, guildid, current_time=datetime.now()):
     with SqliteDict(guildid+'.db') as db:
         if 'history' in db:
             history = db['history']
-            if history:
-                for _, match in enumerate(reversed(history)):
-                    if userid in match['team_a'] or userid in match['team_b']:
-                        output = (current_time-match['time']).total_seconds()
-                        break
+            for _, match in enumerate(reversed(history)):
+                if userid in match['team_a'] or userid in match['team_b']:
+                    output = (current_time-match['time']).total_seconds()
+                    break
+    print(output)
     return output
 
 
@@ -240,8 +242,8 @@ def get_history(guildid, userid=None):
     """Fetch list of matches for guild or specified user in guild."""
     with SqliteDict(str(guildid)+'.db') as db:
         if 'history' not in db or not db['history']:
-            return None
-        if userid:
+            history = None
+        elif userid:
             history = list(filter(lambda x: (userid) in x['team_a'] or (
                 userid) in x['team_b'], db['history']))
             history.reverse()
