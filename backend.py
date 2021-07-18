@@ -180,35 +180,18 @@ def make_teams(players, guildid, pool=25):
     team_a = team_b = []
     best_quality = 0.0
 
-    iteration = 0
-    while iteration < pool:
+    for _ in range(pool):
         random.shuffle(players)
         team_size = len(players) // 2
         t1 = {str(uid): player_ratings[str(uid)]
               for uid in players[:team_size]}
         t2 = {str(uid): player_ratings[str(uid)]
               for uid in players[team_size:]}
-
-        if not (myid in t1 and (t1.keys & blacklist)) or (myid in t2 and (t2.keys & blacklist)):
-            quality = ts.quality([t1, t2])
-            if quality > best_quality:
-                team_a = list(t1.keys())
-                team_b = list(t2.keys())
-                best_quality = quality
-            iteration += 1
-
-    # for _ in range(pool):
-    #     random.shuffle(players)
-    #     team_size = len(players) // 2
-    #     t1 = {str(uid): player_ratings[str(uid)]
-    #           for uid in players[:team_size]}
-    #     t2 = {str(uid): player_ratings[str(uid)]
-    #           for uid in players[team_size:]}
-    #     quality = ts.quality([t1, t2])
-    #     if quality > best_quality:
-    #         team_a = list(t1.keys())
-    #         team_b = list(t2.keys())
-    #         best_quality = quality
+        quality = ts.quality([t1, t2])
+        if quality > best_quality:
+            team_a = list(t1.keys())
+            team_b = list(t2.keys())
+            best_quality = quality
 
     # sort teams by rating
     team_a, team_b = sorted(team_a, key=lambda x: player_ratings[x]), sorted(
