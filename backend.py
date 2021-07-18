@@ -10,7 +10,6 @@ from sqlitedict import SqliteDict
 from CustomTrueSkill import rate_with_round_score, win_probability
 
 myid = 263745246821744640
-blacklist = set([249981070055833600, 825918249127379025])
 
 # TrueSkill DB helper functions
 
