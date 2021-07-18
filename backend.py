@@ -9,6 +9,9 @@ from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score, win_probability
 
+myid = 263745246821744640
+blacklist = set([249981070055833600, 825918249127379025])
+
 # TrueSkill DB helper functions
 
 
@@ -169,13 +172,14 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     return team_a_ratings, team_b_ratings, team_a_new, team_b_new
 
 
-def make_teams(players, guildid, pool=10):
+def make_teams(players, guildid, pool=25):
     """Make teams based on rating."""
     start = time.time()
     guildid = str(guildid)
     player_ratings = get_ratings(players, guildid)
     team_a = team_b = []
     best_quality = 0.0
+
     for _ in range(pool):
         random.shuffle(players)
         team_size = len(players) // 2
@@ -188,6 +192,7 @@ def make_teams(players, guildid, pool=10):
             team_a = list(t1.keys())
             team_b = list(t2.keys())
             best_quality = quality
+
     # sort teams by rating
     team_a, team_b = sorted(team_a, key=lambda x: player_ratings[x]), sorted(
         team_b, key=lambda x: player_ratings[x])
