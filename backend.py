@@ -9,6 +9,8 @@ from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score, win_probability
 
+myid = 263745246821744640
+
 # TrueSkill DB helper functions
 
 
@@ -91,10 +93,12 @@ def get_ratings(users, guildid):
     return output
 
 
-def get_decay(userid, guildid, current_time=datetime.now()):
+def get_decay(userid, guildid, current_time=None):
     """Returns the amount of decay for a user, based on time since last match."""
     start = time.time()
     userid, guildid = str(userid), str(guildid)
+    if not current_time:
+        current_time = datetime.now()
     last_match = time_since_last_match(
         userid, guildid, current_time=current_time)
     if last_match:
@@ -167,13 +171,14 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     return team_a_ratings, team_b_ratings, team_a_new, team_b_new
 
 
-def make_teams(players, guildid, pool=10):
+def make_teams(players, guildid, pool=25):
     """Make teams based on rating."""
     start = time.time()
     guildid = str(guildid)
     player_ratings = get_ratings(players, guildid)
     team_a = team_b = []
     best_quality = 0.0
+
     for _ in range(pool):
         random.shuffle(players)
         team_size = len(players) // 2
@@ -186,6 +191,7 @@ def make_teams(players, guildid, pool=10):
             team_a = list(t1.keys())
             team_b = list(t2.keys())
             best_quality = quality
+
     # sort teams by rating
     team_a, team_b = sorted(team_a, key=lambda x: player_ratings[x]), sorted(
         team_b, key=lambda x: player_ratings[x])
@@ -228,11 +234,11 @@ def time_since_last_match(userid, guildid, current_time=datetime.now()):
     with SqliteDict(guildid+'.db') as db:
         if 'history' in db:
             history = db['history']
-            if history:
-                for _, match in enumerate(reversed(history)):
-                    if userid in match['team_a'] or userid in match['team_b']:
-                        output = (current_time-match['time']).total_seconds()
-                        break
+            for _, match in enumerate(reversed(history)):
+                if userid in match['team_a'] or userid in match['team_b']:
+                    output = (current_time-match['time']).total_seconds()
+                    break
+    print(output)
     return output
 
 
@@ -240,8 +246,8 @@ def get_history(guildid, userid=None):
     """Fetch list of matches for guild or specified user in guild."""
     with SqliteDict(str(guildid)+'.db') as db:
         if 'history' not in db or not db['history']:
-            return None
-        if userid:
+            history = None
+        elif userid:
             history = list(filter(lambda x: (userid) in x['team_a'] or (
                 userid) in x['team_b'], db['history']))
             history.reverse()
