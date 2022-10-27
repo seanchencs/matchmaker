@@ -1,6 +1,7 @@
 from datetime import datetime
 import discord
 from typing import Set
+from CustomTrueSkill import win_probability
 from backend import make_teams, record_result
 
 
@@ -9,7 +10,13 @@ class Match:
         self.players = players
         self.guild_id = guild_id
         player_ids = [player.id for player in self.players]
-        self.team_a, self.team_b, self.quality = make_teams(player_ids, self.guild_id)
+        (
+            self.team_a,
+            self.team_b,
+            self.quality,
+            self.a_win_prob,
+            self.b_win_prob,
+        ) = make_teams(player_ids, self.guild_id)
         self.team_a_score = 0
         self.team_b_score = 0
         self.start_time = datetime.now()

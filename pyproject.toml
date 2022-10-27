@@ -6,14 +6,13 @@ authors = ["seanchencs <<>>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-replit = "^3.0.0"
 trueskill = "^0.4.5"
-py-cord = "^2.2.2"
 flask = "^1.1.2"
 asciichartpy = "^1.5.25"
 python-dotenv = "^0.17.1"
 tabulate = "^0.8.9"
 sqlitedict = "1.7.0"
+py-cord = "^2.2.2"
 
 [tool.poetry.dev-dependencies]
 

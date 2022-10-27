@@ -1,4 +1,3 @@
-import random
 from math import ceil
 
 import discord
@@ -12,7 +11,6 @@ from backend import (
     get_ranks,
     get_rating,
     get_win_loss,
-    record_result,
 )
 from discord.ext import commands, pages
 from match import Match
@@ -21,15 +19,60 @@ from tabulate import tabulate
 guild_to_players = {}  # guild_id : set of players that have clicked Join
 guild_to_match = {}  # guild_id : Match
 
-time_format = "%a %b %d %I:%M %p"
-
 
 class Matchmaker(commands.Cog):
+    """Discord cog with matchmaking commands and elements."""
+
     def __init__(self, bot) -> None:
         self.bot = bot
 
+    @staticmethod
+    def get_match_embed(match: Match):
+        """Get embed for in-progress matches."""
+        team_a = [f"\t<@!{id}>" for id in match.team_a]
+        team_b = [f"\t<@!{id}>" for id in match.team_b]
+
+        embed = discord.Embed(title=match.get_title())
+        embed.add_field(name="Team A", value="\n".join(team_a), inline=True)
+        embed.add_field(name="Team B", value="\n".join(team_b), inline=True)
+        embed.set_footer(
+            text=f"Team A has a {match.a_win_prob} chance to win. Team B has a {match.b_win_prob} chance to win. Predicted quality: {match.quality}"
+        )
+        return embed
+
+    @staticmethod
+    def get_post_match_embed(match: Match):
+        """Get embed for post-match."""
+        team_a_rating_delta = {
+            id: (match.team_a_new[id].mu - match.team_a_old[id].mu)
+            for id in match.team_a
+        }
+        team_b_rating_delta = {
+            id: (match.team_b_new[id].mu - match.team_b_old[id].mu)
+            for id in match.team_b
+        }
+
+        team_a = [f"\t<@!{id}> ({team_a_rating_delta[id]:+.2f})" for id in match.team_a]
+        team_b = [f"\t<@!{id}> ({team_b_rating_delta[id]:+.2f})" for id in match.team_b]
+
+        embed = discord.Embed(title=match.get_title())
+        embed.add_field(
+            name=f"Team A {'👑' if match.team_a_score > match.team_b_score else ''}",
+            value="\n".join(team_a),
+            inline=True,
+        )
+        embed.add_field(
+            name=f"Team B {'👑' if match.team_a_score < match.team_b_score else ''}",
+            value="\n".join(team_b),
+            inline=True,
+        )
+
+        return embed
+
     @discord.slash_command(name="start", description="Start a match.")
     async def start(self, ctx):
+        """Discord slash command to start matchmaking with view to allow players to join."""
+
         def get_start_msg(guild_id):
             """Get updated start message with current list of players."""
             players = guild_to_players[guild_id]
@@ -40,17 +83,9 @@ class Matchmaker(commands.Cog):
             )
             return start_msg
 
-        def get_match_embed(match: Match):
-            team_a = [f"\t<@!{id}>" for id in match.team_a]
-            team_b = [f"\t<@!{id}>" for id in match.team_b]
-
-            embed = discord.Embed(title=match.get_title())
-            embed.add_field(name="Team A", value="\n".join(team_a), inline=True)
-            embed.add_field(name="Team B", value="\n".join(team_b), inline=True)
-
-            return embed
-
         class JoinButton(discord.ui.View):
+            """Discord view for starting games."""
+
             @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
             async def join_button_cb(self, button, interaction):
                 guild_id = interaction.guild_id
@@ -64,6 +99,8 @@ class Matchmaker(commands.Cog):
                 )
 
         class LeaveMakeButtons(discord.ui.View):
+            """Discord view for user who has joined /start. Used ephermerally in response to Join."""
+
             def __init__(self, parent_interaction):
                 super().__init__()
                 self.parent_interaction = parent_interaction
@@ -102,6 +139,8 @@ class Matchmaker(commands.Cog):
                 guild_to_players[guild_id] = set()
 
         class MatchView(discord.ui.View):
+            """Discord view for match in-progress."""
+
             @discord.ui.button(label="Move🎤", style=discord.ButtonStyle.blurple)
             async def move_button_cb(self, button, interaction):
                 if button.label == "Move🎤":
@@ -150,8 +189,6 @@ class Matchmaker(commands.Cog):
                     button.label = "Move Back 🎤"
                     await interaction.response.edit_message(view=self)
 
-                    # await ctx.send(f"{count} player{'s' if count > 1 else ''} moved.", ephemeral=True, delete_after=3)
-
                 else:
                     # find voice channels
                     gd = interaction.guild
@@ -183,6 +220,8 @@ class Matchmaker(commands.Cog):
                 )
 
         class RecordModal(discord.ui.Modal):
+            """Modal for entering results of matches."""
+
             def __init__(self, parent_interaction, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
                 self.parent_interaction = parent_interaction
@@ -194,39 +233,6 @@ class Matchmaker(commands.Cog):
                 )
 
             async def callback(self, interaction: discord.Interaction):
-                def get_post_match_embed(match: Match):
-                    team_a_rating_delta = {
-                        id: (match.team_a_new[id].mu - match.team_a_old[id].mu)
-                        for id in match.team_a
-                    }
-                    team_b_rating_delta = {
-                        id: (match.team_b_new[id].mu - match.team_b_old[id].mu)
-                        for id in match.team_b
-                    }
-
-                    team_a = [
-                        f"\t<@!{id}> ({team_a_rating_delta[id]:+.2f})"
-                        for id in match.team_a
-                    ]
-                    team_b = [
-                        f"\t<@!{id}> ({team_b_rating_delta[id]:+.2f})"
-                        for id in match.team_b
-                    ]
-
-                    embed = discord.Embed(title=match.get_title())
-                    embed.add_field(
-                        name=f"Team A {'👑' if match.team_a_score > match.team_b_score else ''}",
-                        value="\n".join(team_a),
-                        inline=True,
-                    )
-                    embed.add_field(
-                        name=f"Team B {'👑' if match.team_a_score < match.team_b_score else ''}",
-                        value="\n".join(team_b),
-                        inline=True,
-                    )
-
-                    return embed
-
                 team_a_score = int(self.children[0].value)
                 team_b_score = int(self.children[1].value)
                 match = guild_to_match[guild_id]
@@ -248,6 +254,7 @@ class Matchmaker(commands.Cog):
 
     @discord.slash_command(name="leaderboard", description="Display the leaderboard.")
     async def leaderboard(self, ctx):
+        """Discord slash command to show leaderboard."""
         await ctx.defer()
         ranks = get_ranks(get_playerlist(ctx.guild.id), ctx.guild.id, metric="exposure")
         if not ranks:
@@ -279,6 +286,8 @@ class Matchmaker(commands.Cog):
 
     @discord.slash_command(name="history", description="Display match history")
     async def history(self, ctx):
+        """Discord slash command for showing guild-wide match history."""
+
         def get_pages(history):
             output = []
             for i in range(0, len(history), 5):
@@ -300,6 +309,7 @@ class Matchmaker(commands.Cog):
 
     @discord.user_command(name="Rating and History")
     async def user_rating_history(self, ctx, member: discord.Member):
+        """Discord user command for showing user's profile, incl. rating, rank, w/l, recent matches, graph."""
         await ctx.defer()
         user_id = str(member.id)
         pfp = member.display_avatar
@@ -358,22 +368,6 @@ class Matchmaker(commands.Cog):
         if history:
             embed.add_field(name="Graph", value=f"`{rating_graph}`", inline=False)
         await ctx.respond(embed=embed)
-
-    @discord.slash_command(name="test", description="Generate 10 test matches.")
-    async def test(self, ctx):
-        await ctx.defer()
-        count = 10
-        members = {member for member in ctx.guild.members}
-        print(len(members))
-        for _ in range(count):
-            players = random.sample(members, len(members) - len(members) % 2)
-            attacker_score = random.choice((13, random.randint(0, 11)))
-            defender_score = random.randint(0, 11) if attacker_score == 13 else 13
-
-            match = Match(guild_id=ctx.guild.id, players=players)
-            match.record_result(attacker_score, defender_score)
-            await ctx.send(match.get_summary())
-        await ctx.respond("✅")
 
 
 def setup(bot):

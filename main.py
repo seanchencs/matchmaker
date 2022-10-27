@@ -4,7 +4,8 @@ import os
 import discord
 import dotenv
 import trueskill as ts
-from discord.ext import commands
+
+from config import show_test_commands
 
 # load env
 if os.path.isfile(".env"):
@@ -35,4 +36,6 @@ async def on_ready():
 
 
 bot.load_extension("cogs.matchmaker")
+if show_test_commands:
+    bot.load_extension("cogs.test")
 bot.run(os.getenv("TOKEN"))

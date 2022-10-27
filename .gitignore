@@ -1,9 +1,10 @@
 .replit
-.log
-.db
+*.log
+*.db
 .env
 .vscode/
 todo
 __pycache__/
 config.py
 profiling.prof
+.poetry_cache

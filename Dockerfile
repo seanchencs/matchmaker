@@ -1,8 +1,8 @@
-FROM python:3.11
+FROM python:3.8
 
 RUN mkdir /app
 
-ADD ./* /app
+ADD ./ /app
 
 WORKDIR /app
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
