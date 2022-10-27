@@ -417,10 +417,13 @@ def undo_last_match(guildid):
     return match
 
 
-def get_match_summary(match):
+def get_match_summary(match, timestamps=True, names=True):
     output = []
-    output.append(f"{match['time'].strftime('%a %b %d %I:%M %p')}: ")
-    output.append(", ".join([f"<@!{uid}>" for uid in match["team_a"]]))
+    if timestamps:
+        output.append(f"{match['time'].strftime('%a %b %d %I:%M %p')}:\n")
+    if names:
+        output.append(", ".join([f"<@!{uid}>" for uid in match["team_a"]]))
     output.append(f" { match['team_a_score']} - {match['team_b_score']} ")
-    output.append(", ".join([f"<@!{uid}>" for uid in match["team_b"]]))
+    if names:
+        output.append(", ".join([f"<@!{uid}>" for uid in match["team_b"]]))
     return "".join(output)

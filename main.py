@@ -20,7 +20,9 @@ handler.setFormatter(
 logger.addHandler(handler)
 
 # discord py client
-bot = discord.Bot()
+intents = discord.Intents.default()
+intents.members = True
+bot = discord.Bot(intents=intents)
 
 # TrueSkill Rating Settings
 env = ts.TrueSkill(draw_probability=0.01)

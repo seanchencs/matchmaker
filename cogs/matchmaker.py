@@ -28,10 +28,6 @@ class Matchmaker(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @discord.slash_command(name="test1", description="hello world")
-    async def test(self, ctx):
-        await ctx.send("Hi!")
-
     @discord.slash_command(name="start", description="Start a match.")
     async def start(self, ctx):
         def get_start_msg(guild_id):
@@ -252,9 +248,10 @@ class Matchmaker(commands.Cog):
 
     @discord.slash_command(name="leaderboard", description="Display the leaderboard.")
     async def leaderboard(self, ctx):
+        await ctx.defer()
         ranks = get_ranks(get_playerlist(ctx.guild.id), ctx.guild.id, metric="exposure")
         if not ranks:
-            await ctx.send("No Ranked Players.")
+            await ctx.respond("No Ranked Players.")
             return
         leaderboard = sorted(ranks.keys(), key=lambda x: ranks[x])
         output = []
@@ -284,14 +281,16 @@ class Matchmaker(commands.Cog):
     async def history(self, ctx):
         def get_pages(history):
             output = []
-            for i in range(0, len(history), 10):
-                chunk = history[i : i + 10]
-                content = "\n".join([get_match_summary(match) for match in chunk])
-                embed = discord.Embed()
-                embed.add_field(name=f"Match History", value=content)
-                output.append(pages.Page(title=f"History", embeds=[embed]))
+            for i in range(0, len(history), 5):
+                chunk = history[i : i + 5]
+                embeds = []
+                for match in chunk:
+                    embed = discord.Embed(description=get_match_summary(match))
+                    embeds.append(embed)
+                output.append(pages.Page(title=f"History", embeds=embeds))
             return output
 
+        await ctx.defer()
         history = get_history(ctx.guild.id)
         if history:
             paginator = pages.Paginator(pages=get_pages(history))
@@ -299,8 +298,9 @@ class Matchmaker(commands.Cog):
         else:
             await ctx.respond("No Matches Found.")
 
-    @discord.user_command(name="Rating and User History")
+    @discord.user_command(name="Rating and History")
     async def user_rating_history(self, ctx, member: discord.Member):
+        await ctx.defer()
         user_id = str(member.id)
         pfp = member.display_avatar
         rating = get_rating(user_id, ctx.guild.id)
@@ -326,24 +326,27 @@ class Matchmaker(commands.Cog):
 
         # match history
         if history:
-            # match_history = '\n'.join([get_match_summary(match) for match in history[:10]])
             match_history = []
-            for match in history[:10]:
-                summary = get_match_summary(match)
+            for match in history[:3]:
+                summary = get_match_summary(match, timestamps=False, names=True)
                 old = match["old_ratings"][user_id].mu
                 if user_id in match["team_a"]:
                     new = match["team_a"][user_id].mu
                     delta = new - old
-                    match_history.append(f"{summary} ({delta:+.2f})")
+                    match_history.append(
+                        f"{'✅' if delta > 0 else '❌'}({delta:+.2f})\t{summary}"
+                    )
                 else:
                     new = match["team_b"][user_id].mu
                     delta = new - old
-                    match_history.append(f"{summary} ({delta:+.2f})")
+                    match_history.append(
+                        f"{'✅' if delta > 0 else '❌'}({delta:+.2f})\t{summary}"
+                    )
             match_history = "\n".join(match_history)
         else:
             match_history = "No Matches Found."
 
-        embed = discord.Embed(title=f"{member.name}")
+        embed = discord.Embed(title=f"{member.name}{' 👑' if rank == 1 else ''}")
         embed.set_thumbnail(url=pfp.url)
         embed.add_field(
             name="Rating", value=f"{rating.mu:.2f} ± {rating.sigma:.2f}", inline=True
@@ -358,6 +361,7 @@ class Matchmaker(commands.Cog):
 
     @discord.slash_command(name="test", description="Generate 10 test matches.")
     async def test(self, ctx):
+        await ctx.defer()
         count = 10
         members = {member for member in ctx.guild.members}
         print(len(members))
@@ -369,6 +373,7 @@ class Matchmaker(commands.Cog):
             match = Match(guild_id=ctx.guild.id, players=players)
             match.record_result(attacker_score, defender_score)
             await ctx.send(match.get_summary())
+        await ctx.respond("✅")
 
 
 def setup(bot):
