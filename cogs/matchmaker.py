@@ -1,19 +1,28 @@
+import random
 from math import ceil
-from typing import List
+
 import discord
-from discord.ext import commands, pages
-from backend import get_history, get_match_summary, get_past_ratings, get_playerlist, get_ranks, get_rating, get_win_loss, record_result
-from tabulate import tabulate
 import trueskill as ts
 from asciichartpy import plot
-import random
-
+from backend import (
+    get_history,
+    get_match_summary,
+    get_past_ratings,
+    get_playerlist,
+    get_ranks,
+    get_rating,
+    get_win_loss,
+    record_result,
+)
+from discord.ext import commands, pages
 from match import Match
+from tabulate import tabulate
 
 guild_to_players = {}  # guild_id : set of players that have clicked Join
 guild_to_match = {}  # guild_id : Match
 
-time_format = '%a %b %d %I:%M %p'
+time_format = "%a %b %d %I:%M %p"
+
 
 class Matchmaker(commands.Cog):
     def __init__(self, bot) -> None:
@@ -121,9 +130,13 @@ class Matchmaker(commands.Cog):
                             b_vc = vc
                     # create vc if necessary
                     if a_vc is None:
-                        a_vc = await gd.create_voice_channel("Team A", category=game_category)
+                        a_vc = await gd.create_voice_channel(
+                            "Team A", category=game_category
+                        )
                     if b_vc is None:
-                        b_vc = await gd.create_voice_channel("Team B", category=game_category)
+                        b_vc = await gd.create_voice_channel(
+                            "Team B", category=game_category
+                        )
                     # move members to right channel
                     team_a = guild_to_match[gd.id].team_a
                     team_b = guild_to_match[gd.id].team_b
@@ -143,7 +156,6 @@ class Matchmaker(commands.Cog):
 
                     # await ctx.send(f"{count} player{'s' if count > 1 else ''} moved.", ephemeral=True, delete_after=3)
 
-                    
                 else:
                     # find voice channels
                     gd = interaction.guild
@@ -240,14 +252,13 @@ class Matchmaker(commands.Cog):
 
     @discord.slash_command(name="leaderboard", description="Display the leaderboard.")
     async def leaderboard(self, ctx):
-        ranks = get_ranks(get_playerlist(ctx.guild.id),
-                          ctx.guild.id, metric='exposure')
+        ranks = get_ranks(get_playerlist(ctx.guild.id), ctx.guild.id, metric="exposure")
         if not ranks:
-            await ctx.send('No Ranked Players.')
+            await ctx.send("No Ranked Players.")
             return
         leaderboard = sorted(ranks.keys(), key=lambda x: ranks[x])
         output = []
-        headers = ['Rank', 'Name', 'Rating', 'Score', 'Win/Loss']
+        headers = ["Rank", "Name", "Rating", "Score", "Win/Loss"]
         for item in leaderboard:
             member = ctx.guild.get_member(int(item))
             if member:
@@ -256,22 +267,31 @@ class Matchmaker(commands.Cog):
                 rating = get_rating(item, ctx.guild.id)
                 exposure = ts.expose(rating)
                 w, l = get_win_loss(item, ctx.guild.id)
-                output.append([rank, name, f'{rating.mu: .4f} ± {rating.sigma: .2f}', round(
-                    exposure, 4), f'{w}W {l}L'])
-        await ctx.respond(f"`{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`")
+                output.append(
+                    [
+                        rank,
+                        name,
+                        f"{rating.mu: .4f} ± {rating.sigma: .2f}",
+                        round(exposure, 4),
+                        f"{w}W {l}L",
+                    ]
+                )
+        await ctx.respond(
+            f"`{tabulate(output, headers=headers, tablefmt='psql', floatfmt='.4f')}`"
+        )
 
     @discord.slash_command(name="history", description="Display match history")
     async def history(self, ctx):
         def get_pages(history):
             output = []
             for i in range(0, len(history), 10):
-                chunk = history[i:i+10]
-                content = '\n'.join([get_match_summary(match) for match in chunk])
+                chunk = history[i : i + 10]
+                content = "\n".join([get_match_summary(match) for match in chunk])
                 embed = discord.Embed()
                 embed.add_field(name=f"Match History", value=content)
                 output.append(pages.Page(title=f"History", embeds=[embed]))
             return output
-        
+
         history = get_history(ctx.guild.id)
         if history:
             paginator = pages.Paginator(pages=get_pages(history))
@@ -295,10 +315,13 @@ class Matchmaker(commands.Cog):
         # plot rating history
         # scaling
         if len(past_ratings) < 30:
-            past_ratings = [val for val in past_ratings for _ in range(
-                0, ceil(30/len(past_ratings)))]
+            past_ratings = [
+                val
+                for val in past_ratings
+                for _ in range(0, ceil(30 / len(past_ratings)))
+            ]
         elif len(past_ratings) > 60:
-            past_ratings = past_ratings[::len(past_ratings)//30]
+            past_ratings = past_ratings[:: len(past_ratings) // 30]
         rating_graph = plot(past_ratings)
 
         # match history
@@ -307,22 +330,24 @@ class Matchmaker(commands.Cog):
             match_history = []
             for match in history[:10]:
                 summary = get_match_summary(match)
-                old = match['old_ratings'][user_id].mu
-                if user_id in match['team_a']:
-                    new = match['team_a'][user_id].mu
+                old = match["old_ratings"][user_id].mu
+                if user_id in match["team_a"]:
+                    new = match["team_a"][user_id].mu
                     delta = new - old
                     match_history.append(f"{summary} ({delta:+.2f})")
                 else:
-                    new = match['team_b'][user_id].mu
+                    new = match["team_b"][user_id].mu
                     delta = new - old
                     match_history.append(f"{summary} ({delta:+.2f})")
-            match_history = '\n'.join(match_history)
+            match_history = "\n".join(match_history)
         else:
             match_history = "No Matches Found."
 
         embed = discord.Embed(title=f"{member.name}")
         embed.set_thumbnail(url=pfp.url)
-        embed.add_field(name="Rating", value=f"{rating.mu:.2f} ± {rating.sigma:.2f}", inline=True)
+        embed.add_field(
+            name="Rating", value=f"{rating.mu:.2f} ± {rating.sigma:.2f}", inline=True
+        )
         embed.add_field(name="Score", value=f"{ts.expose(rating):.2f}", inline=True)
         embed.add_field(name="W/L", value=f"{win}W {loss}L", inline=True)
         embed.add_field(name="Rank", value=f"{rank}", inline=True)
@@ -337,13 +362,14 @@ class Matchmaker(commands.Cog):
         members = {member for member in ctx.guild.members}
         print(len(members))
         for _ in range(count):
-            players = random.sample(members, len(members)-len(members)%2)
+            players = random.sample(members, len(members) - len(members) % 2)
             attacker_score = random.choice((13, random.randint(0, 11)))
             defender_score = random.randint(0, 11) if attacker_score == 13 else 13
 
-            match = Match(guild_id = ctx.guild.id, players=players)
+            match = Match(guild_id=ctx.guild.id, players=players)
             match.record_result(attacker_score, defender_score)
             await ctx.send(match.get_summary())
+
 
 def setup(bot):
     bot.add_cog(Matchmaker(bot))

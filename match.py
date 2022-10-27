@@ -18,7 +18,12 @@ class Match:
         """Record winner of match."""
         self.team_a_score = a_score
         self.team_b_score = b_score
-        self.team_a_old, self.team_b_old, self.team_a_new, self.team_b_new = record_result(self.team_a, self.team_b, a_score, b_score, self.guild_id)
+        (
+            self.team_a_old,
+            self.team_b_old,
+            self.team_a_new,
+            self.team_b_new,
+        ) = record_result(self.team_a, self.team_b, a_score, b_score, self.guild_id)
 
     def get_title(self):
         """Get formatted title for match."""
@@ -31,4 +36,3 @@ class Match:
         if self.team_a_score or self.team_b_score:
             return f"{','.join([f'<@!{id}>' for id in self.team_a])} {self.team_a_score}-{self.team_b_score} {','.join([f'<@!{id}>' for id in self.team_b])}"
         return None
-    
