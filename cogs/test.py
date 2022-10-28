@@ -11,7 +11,7 @@ class Test(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @discord.slash_command(name="test", description="Generate 10 test matches.")
+    @discord.slash_command(name="test", description="Generate test matches.")
     @default_permissions(kick_members=True)
     async def test(self, ctx, num_matches: discord.Option(int)):
         await ctx.defer()

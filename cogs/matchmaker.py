@@ -1,3 +1,4 @@
+import logging
 from math import ceil
 
 import discord
@@ -18,6 +19,14 @@ from tabulate import tabulate
 
 guild_to_players = {}  # guild_id : set of players that have clicked Join
 guild_to_match = {}  # guild_id : Match
+
+logger = logging.getLogger("matchmaker")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename="matchmaker.log", encoding="utf-8", mode="w")
+handler.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+)
+logger.addHandler(handler)
 
 
 class Matchmaker(commands.Cog):
@@ -88,6 +97,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
             async def join_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Join in guild {interaction.guild.name}"
+                )
                 guild_id = interaction.guild_id
                 guild_to_players[guild_id].add(interaction.user)
                 start_msg = get_start_msg(guild_id)
@@ -107,6 +119,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Leave", style=discord.ButtonStyle.danger)
             async def leave_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Leave in guild {interaction.guild.name}"
+                )
                 guild_id = interaction.guild_id
                 guild_to_players[guild_id].remove(interaction.user)
                 start_msg = get_start_msg(guild_id)
@@ -117,6 +132,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Start Game", style=discord.ButtonStyle.primary)
             async def make_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Start Game in guild {interaction.guild.name}"
+                )
                 guild_id = interaction.guild_id
                 players = guild_to_players[guild_id]
                 if len(players) < 2:
@@ -143,6 +161,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Move🎤", style=discord.ButtonStyle.blurple)
             async def move_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Move in guild {interaction.guild.name}"
+                )
                 if button.label == "Move🎤":
                     gd = interaction.guild
                     # find team voice channels
@@ -206,6 +227,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Record Result", style=discord.ButtonStyle.success)
             async def record_result_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Record Result in guild {interaction.guild.name}"
+                )
                 match = guild_to_match[guild_id]
                 await interaction.response.send_modal(
                     RecordModal(parent_interaction=interaction, title=match.get_title())
@@ -213,6 +237,9 @@ class Matchmaker(commands.Cog):
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger)
             async def cancel_button_cb(self, button, interaction):
+                logger.debug(
+                    f"{interaction.user.name} pressed Cancel in guild {interaction.guild.name}"
+                )
                 guild_id = interaction.guild_id
                 guild_to_match[guild_id] = None
                 await interaction.response.edit_message(
@@ -233,6 +260,9 @@ class Matchmaker(commands.Cog):
                 )
 
             async def callback(self, interaction: discord.Interaction):
+                logger.debug(
+                    f"{interaction.user.name} submitted Result in guild {interaction.guild.name}"
+                )
                 team_a_score = int(self.children[0].value)
                 team_b_score = int(self.children[1].value)
                 match = guild_to_match[guild_id]
