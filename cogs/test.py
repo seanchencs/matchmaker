@@ -12,7 +12,7 @@ class Test(commands.Cog):
         self.bot = bot
 
     @discord.slash_command(name="test", description="Generate 10 test matches.")
-    @default_permissions(manage_emojis=True)
+    @default_permissions(kick_members=True)
     async def test(self, ctx, num_matches: discord.Option(int)):
         await ctx.defer()
         count = num_matches
