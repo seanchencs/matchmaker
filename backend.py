@@ -39,7 +39,6 @@ def get_playerlist(guildid):
 
 def get_rating(userid, guildid):
     """Returns the TrueSkill rating of a discord user. Will initialize skill if none is found."""
-    # start = time.time()
     userid = str(userid)
     guildid = str(guildid)
     rating = None
@@ -63,16 +62,11 @@ def get_rating(userid, guildid):
             rating = ts.Rating()
             ratings[userid] = rating.mu, rating.sigma
 
-    # print(
-    #     f"[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms"
-    # )
     return rating
 
 
 def get_ratings(users, guildid):
     """Returns dictionary of id to rating for users."""
-    # start = time.time()
-
     output = {}
     current_time = datetime.now()
     with SqliteDict(str(guildid) + ".db", autocommit=True) as db:
@@ -92,17 +86,11 @@ def get_ratings(users, guildid):
                         ts.global_env().sigma,
                     ),
                 )
-                # print(
-                #     f"[{guildid}]: get_skill for {userid} in {round(1000*(time.time()-start), 2)}ms"
-                # )
                 output[userid] = rating
             else:
                 new_rating = ts.Rating()
                 ratings[userid] = new_rating.mu, new_rating.sigma
                 output[userid] = new_rating
-    # print(
-    #     f"[{guildid}]: get_skills for {len(users)} users in {round(1000*(time.time()-start), 2)}ms"
-    # )
     return output
 
 
@@ -114,14 +102,8 @@ def get_decay(userid, guildid, db, current_time=None):
         current_time = datetime.now()
     last_match = time_since_last_match(userid, guildid, db, current_time=current_time)
     if last_match:
-        # print(
-        #     f"[{guildid}]: get_decay for {userid} in {round(1000*(time.time()-start), 2)}ms"
-        # )
         return 0.001 * ((last_match / 50000) ** 2)
     else:
-        # print(
-        #     f"[{guildid}]: get_decay for {userid} in {round(1000*(time.time()-start), 2)}ms"
-        # )
         return 0
 
 
@@ -138,14 +120,10 @@ def set_rating(userid, rating, guildid):
         ratings[userid] = rating.mu, rating.sigma
         db["ratings"] = ratings
         db.commit()
-    # print(
-    #     f"[{guildid}]: set_rating for {userid} in {round(1000*(time.time()-start), 2)}ms"
-    # )
 
 
 def set_ratings(user_ratings, guildid):
     """Set the rating of multiple users."""
-    # start = time.time()
     guildid = str(guildid)
     with SqliteDict(str(guildid) + ".db") as db:
         if "ratings" not in db:
@@ -155,14 +133,10 @@ def set_ratings(user_ratings, guildid):
             ratings[str(userid)] = user_ratings[userid].mu, user_ratings[userid].sigma
         db["ratings"] = ratings
         db.commit()
-    # print(
-    #     f"[{guildid}]: set_ratings for {len(user_ratings)} users in {round(1000*(time.time()-start), 2)}ms"
-    # )
 
 
 def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     """Updates the TrueSkill ratings given a result."""
-    # start = time.time()
     team_a_ratings = get_ratings(team_a, guildid)
     team_b_ratings = get_ratings(team_b, guildid)
     if team_a_score > team_b_score:
@@ -194,7 +168,6 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
         db["history"] = history
         db.commit()
 
-    # print(f"[{guildid}]: record_result in {round(1000*(time.time()-start), 2)}ms")
     return team_a_ratings, team_b_ratings, team_a_new, team_b_new
 
 
@@ -229,16 +202,11 @@ def make_teams(players, guildid, pool=25):
         [player_ratings[str(uid)] for uid in team_b],
         [player_ratings[str(uid)] for uid in team_a],
     )
-    # print(
-    #     f"[{guildid}]: team_1: {a_win*100: .2f}%, team_2: {b_win*100: .2f}%, draw: {(1-a_win-b_win)*100: .2f}%"
-    # )
-    # print(f"[{guildid}]: make_teams for in {1000*(time.time()-start): .2f}ms")
     return team_a, team_b, best_quality, a_win, b_win
 
 
 def get_win_loss(userid, guildid):
     """Get win/loss counts for a user."""
-    # start = time.time()
     userid = str(userid)
     guildid = str(guildid)
     wins, losses = 0, 0
@@ -261,9 +229,6 @@ def get_win_loss(userid, guildid):
                     else:
                         wins += 0.5
                         losses += 0.5
-    # print(
-    #     f"[{guildid}]: get_win_loss for {userid} in {round(1000*(time.time()-start), 2)}ms"
-    # )
     return wins, losses
 
 
@@ -271,14 +236,12 @@ def time_since_last_match(userid, guildid, db, current_time=datetime.now()):
     """Returns the time in seconds since user's last match."""
     userid, guildid = str(userid), str(guildid)
     output = None
-    # with SqliteDict(guildid + ".db") as db:
     if "history" in db:
         history = db["history"]
         for _, match in enumerate(reversed(history)):
             if userid in match["team_a"] or userid in match["team_b"]:
                 output = (current_time - match["time"]).total_seconds()
                 break
-    # print(output)
     return output
 
 
@@ -307,7 +270,6 @@ def get_history(guildid, userid=None):
 
 def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""
-    # start = time.time()
     guildid = str(guildid)
     past_ratings = []
     with SqliteDict(str(guildid) + ".db") as db:
@@ -330,9 +292,6 @@ def get_past_ratings(userid, guildid, pad=False):
                     else:
                         past_ratings.append(ts.global_env().mu)
             past_ratings.append(get_rating(userid, guildid).mu)
-    # print(
-    #     f"[{guildid}]: get_past_ratings for {userid} in {round(1000*(time.time()-start), 2)}ms"
-    # )
     return past_ratings
 
 
@@ -364,7 +323,6 @@ def get_ranks(players, guildid, metric="exposure"):
 
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
-    # start = time.time()
     guildid = str(guildid)
     with SqliteDict(str(guildid) + ".db") as db:
         if "ratings" in db:
@@ -375,30 +333,19 @@ def get_leaderboard(guildid):
             leaderboard = sorted(
                 ratings.items(), key=lambda x: (x[1].mu, -x[1].sigma), reverse=True
             )
-            # print(
-            #     f"[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms"
-            # )
             return leaderboard
-    # print(f"[{guildid}]: get_leaderboard in {round(1000*(time.time()-start), 2)}ms")
     return None
 
 
 def get_leaderboard_by_exposure(guildid):
     """Get leaderboard sorted by exposure (see trueskill.org for more info)."""
-    # start = time.time()
     guildid = str(guildid)
     ids = get_playerlist(guildid)
     if not ids:
-        # print(
-        #     f"[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms"
-        # )
         return None
     ratings = get_ratings(ids, guildid)
     ratings = {id: ratings[id] for id in ratings if ratings[id] != ts.Rating()}
     leaderboard = sorted(ratings.items(), key=lambda x: ts.expose(x[1]), reverse=True)
-    # print(
-    #     f"[{guildid}]: get_leaderboard_by_exposure in {round(1000*(time.time()-start), 2)}ms"
-    # )
     return leaderboard
 
 
