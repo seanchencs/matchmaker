@@ -248,13 +248,19 @@ def get_win_loss(userid, guildid):
                 if userid in match["team_a"]:
                     if match["team_a_score"] > match["team_b_score"]:
                         wins += 1
-                    else:
+                    elif match["team_a_score"] < match["team_b_score"]:
                         losses += 1
+                    else:
+                        wins += 0.5
+                        losses += 0.5
                 elif userid in match["team_b"]:
                     if match["team_b_score"] > match["team_a_score"]:
                         wins += 1
-                    else:
+                    elif match["team_b_score"] < match["team_a_score"]:
                         losses += 1
+                    else:
+                        wins += 0.5
+                        losses += 0.5
     # print(
     #     f"[{guildid}]: get_win_loss for {userid} in {round(1000*(time.time()-start), 2)}ms"
     # )

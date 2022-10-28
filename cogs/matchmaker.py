@@ -32,11 +32,11 @@ class Matchmaker(commands.Cog):
         team_a = [f"\t<@!{id}>" for id in match.team_a]
         team_b = [f"\t<@!{id}>" for id in match.team_b]
 
-        embed = discord.Embed(title=match.get_title())
+        embed = discord.Embed(title=match.get_title(), colour=discord.Colour.teal())
         embed.add_field(name="Team A", value="\n".join(team_a), inline=True)
         embed.add_field(name="Team B", value="\n".join(team_b), inline=True)
         embed.set_footer(
-            text=f"Team A has a {match.a_win_prob} chance to win. Team B has a {match.b_win_prob} chance to win. Predicted quality: {match.quality}"
+            text=f"Team A has a {match.a_win_prob*100:.1f}% chance to win. Team B has a {match.b_win_prob*100:.1f}% chance to win. Predicted quality: {(match.quality-.33)*300:.2f}"
         )
         return embed
 
@@ -55,7 +55,7 @@ class Matchmaker(commands.Cog):
         team_a = [f"\t<@!{id}> ({team_a_rating_delta[id]:+.2f})" for id in match.team_a]
         team_b = [f"\t<@!{id}> ({team_b_rating_delta[id]:+.2f})" for id in match.team_b]
 
-        embed = discord.Embed(title=match.get_title())
+        embed = discord.Embed(title=match.get_title(), colour=discord.Colour.gold())
         embed.add_field(
             name=f"Team A {'👑' if match.team_a_score > match.team_b_score else ''}",
             value="\n".join(team_a),
@@ -92,7 +92,7 @@ class Matchmaker(commands.Cog):
                 guild_to_players[guild_id].add(interaction.user)
                 start_msg = get_start_msg(guild_id)
                 await interaction.response.edit_message(
-                    content=start_msg, view=JoinButton()
+                    content=start_msg, view=JoinButton(timeout=None)
                 )
                 await interaction.followup.send(
                     content="", view=LeaveMakeButtons(interaction), ephemeral=True
@@ -102,7 +102,7 @@ class Matchmaker(commands.Cog):
             """Discord view for user who has joined /start. Used ephermerally in response to Join."""
 
             def __init__(self, parent_interaction):
-                super().__init__()
+                super().__init__(timeout=None)
                 self.parent_interaction = parent_interaction
 
             @discord.ui.button(label="Leave", style=discord.ButtonStyle.danger)
@@ -111,7 +111,7 @@ class Matchmaker(commands.Cog):
                 guild_to_players[guild_id].remove(interaction.user)
                 start_msg = get_start_msg(guild_id)
                 await self.parent_interaction.message.edit(
-                    content=start_msg, view=JoinButton()
+                    content=start_msg, view=JoinButton(timeout=None)
                 )
                 await interaction.response.edit_message(content="💔", view=None)
 
@@ -129,8 +129,8 @@ class Matchmaker(commands.Cog):
 
                 await self.parent_interaction.message.edit(
                     content="",
-                    embed=get_match_embed(guild_to_match[guild_id]),
-                    view=MatchView(),
+                    embed=Matchmaker.get_match_embed(guild_to_match[guild_id]),
+                    view=MatchView(timeout=None),
                 )
                 await interaction.response.edit_message(
                     content="✅", view=None, delete_after=3
@@ -238,7 +238,7 @@ class Matchmaker(commands.Cog):
                 match = guild_to_match[guild_id]
                 match.record_result(a_score=team_a_score, b_score=team_b_score)
                 await self.parent_interaction.message.edit(
-                    content="", embed=get_post_match_embed(match), view=None
+                    content="", embed=Matchmaker.get_post_match_embed(match), view=None
                 )
 
                 await interaction.response.send_message(
@@ -250,7 +250,7 @@ class Matchmaker(commands.Cog):
         guild_to_players[guild_id] = set()
         start_msg = get_start_msg(guild_id)
 
-        await ctx.respond(start_msg, view=JoinButton())
+        await ctx.respond(start_msg, view=JoinButton(timeout=None))
 
     @discord.slash_command(name="leaderboard", description="Display the leaderboard.")
     async def leaderboard(self, ctx):
@@ -316,6 +316,7 @@ class Matchmaker(commands.Cog):
         rating = get_rating(user_id, ctx.guild.id)
         history = get_history(ctx.guild.id, user_id)
         win, loss = get_win_loss(user_id, ctx.guild.id)
+        win_rate = win / (win + loss) if history else 0
         if history:
             rank = get_ranks(players=[user_id], guildid=ctx.guild.id)[user_id]
         else:
@@ -337,33 +338,36 @@ class Matchmaker(commands.Cog):
         # match history
         if history:
             match_history = []
-            for match in history[:3]:
+            short_history = []
+            for match in history[:5]:
                 summary = get_match_summary(match, timestamps=False, names=True)
                 old = match["old_ratings"][user_id].mu
                 if user_id in match["team_a"]:
                     new = match["team_a"][user_id].mu
                     delta = new - old
-                    match_history.append(
-                        f"{'✅' if delta > 0 else '❌'}({delta:+.2f})\t{summary}"
-                    )
+                    short_history.append(f"{'✅' if delta > 0 else '❌'}")
+                    match_history.append(f"{summary} ({delta:+.2f})")
                 else:
                     new = match["team_b"][user_id].mu
                     delta = new - old
-                    match_history.append(
-                        f"{'✅' if delta > 0 else '❌'}({delta:+.2f})\t{summary}"
-                    )
-            match_history = "\n".join(match_history)
+                    short_history.append(f"{'✅' if delta > 0 else '❌'}")
+                    match_history.append(f"{summary} ({delta:+.2f})")
+            match_history = "\n".join(match_history[:3])
+            short_history = "".join(short_history)
         else:
             match_history = "No Matches Found."
+            short_history = "N/A"
 
         embed = discord.Embed(title=f"{member.name}{' 👑' if rank == 1 else ''}")
         embed.set_thumbnail(url=pfp.url)
+        embed.add_field(name="Rank", value=f"{rank}", inline=True)
         embed.add_field(
             name="Rating", value=f"{rating.mu:.2f} ± {rating.sigma:.2f}", inline=True
         )
         embed.add_field(name="Score", value=f"{ts.expose(rating):.2f}", inline=True)
         embed.add_field(name="W/L", value=f"{win}W {loss}L", inline=True)
-        embed.add_field(name="Rank", value=f"{rank}", inline=True)
+        embed.add_field(name="Win%", value=f"{win_rate*100:.2f}%", inline=True)
+        embed.add_field(name="Recent Matches", value=short_history, inline=True)
         embed.add_field(name="History", value=match_history, inline=False)
         if history:
             embed.add_field(name="Graph", value=f"`{rating_graph}`", inline=False)
