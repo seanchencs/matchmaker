@@ -1,6 +1,5 @@
 import os
 import random
-import time
 from datetime import datetime
 from math import isclose
 
@@ -9,15 +8,15 @@ from sqlitedict import SqliteDict
 
 from CustomTrueSkill import rate_with_round_score, win_probability
 
-# TrueSkill DB helper functions
-
 
 def delete_db(guildid):
+    """Delete the db belong to guildid."""
     guildid = str(guildid)
     os.remove(f"{guildid}.db")
 
 
 def db_string(guildid):
+    """Returns full db as string."""
     output = []
     guildid = str(guildid)
     with SqliteDict(str(guildid) + ".db") as db:
@@ -43,7 +42,6 @@ def get_rating(userid, guildid):
     guildid = str(guildid)
     rating = None
 
-    # check db
     with SqliteDict(str(guildid) + ".db", autocommit=True) as db:
         if "ratings" not in db:
             db["ratings"] = {}
@@ -96,7 +94,6 @@ def get_ratings(users, guildid):
 
 def get_decay(userid, guildid, db, current_time=None):
     """Returns the amount of decay for a user, based on time since last match."""
-    # start = time.time()
     userid, guildid = str(userid), str(guildid)
     if not current_time:
         current_time = datetime.now()
@@ -109,7 +106,6 @@ def get_decay(userid, guildid, db, current_time=None):
 
 def set_rating(userid, rating, guildid):
     """Set the rating of a user."""
-    # start = time.time()
     userid = str(userid)
     guildid = str(guildid)
     # write to shelve persistent db
@@ -137,6 +133,7 @@ def set_ratings(user_ratings, guildid):
 
 def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     """Updates the TrueSkill ratings given a result."""
+    # rate match with modified TrueSkill and record new ratings.
     team_a_ratings = get_ratings(team_a, guildid)
     team_b_ratings = get_ratings(team_b, guildid)
     if team_a_score > team_b_score:
@@ -173,12 +170,12 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
 
 def make_teams(players, guildid, pool=25):
     """Make teams based on rating."""
-    # start = time.time()
     guildid = str(guildid)
     player_ratings = get_ratings(players, guildid)
     team_a = team_b = []
     best_quality = 0.0
 
+    # generate pool
     for _ in range(pool):
         random.shuffle(players)
         team_size = len(players) // 2
@@ -371,6 +368,16 @@ def undo_last_match(guildid):
 
 
 def get_match_summary(match, timestamps=True, names=True):
+    """Gets summary string for match.
+
+    Args:
+        match (Dict): match dictionary from db match-history
+        timestamps (bool, optional): option to include timestamp in output. Defaults to True.
+        names (bool, optional): option to include names (mentions) in output. Defaults to True.
+
+    Returns:
+        str: match summary
+    """
     output = []
     if timestamps:
         output.append(f"{match['time'].strftime('%a %b %d %I:%M %p')}:\n")

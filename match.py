@@ -1,7 +1,6 @@
 from datetime import datetime
 import discord
 from typing import Set
-from CustomTrueSkill import win_probability
 from backend import make_teams, record_result
 
 
