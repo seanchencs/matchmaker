@@ -359,7 +359,7 @@ class Matchmaker(commands.Cog):
             past_ratings = [
                 val
                 for val in past_ratings
-                for _ in range(0, ceil(30 / len(past_ratings)))
+                for _ in range(0, 30 // len(past_ratings))
             ]
         elif len(past_ratings) > 60:
             past_ratings = past_ratings[:: len(past_ratings) // 30]
@@ -397,10 +397,10 @@ class Matchmaker(commands.Cog):
         embed.add_field(name="Score", value=f"{ts.expose(rating):.2f}", inline=True)
         embed.add_field(name="W/L", value=f"{win}W {loss}L", inline=True)
         embed.add_field(name="Win%", value=f"{win_rate*100:.2f}%", inline=True)
-        embed.add_field(name="Recent Matches", value=short_history, inline=True)
+        embed.add_field(name="Recent Results", value=short_history, inline=True)
         embed.add_field(name="History", value=match_history, inline=False)
         if history:
-            embed.add_field(name="Graph", value=f"`{rating_graph}`", inline=False)
+            embed.add_field(name="Graph", value=f"```\n{rating_graph}\n```", inline=False)
         await ctx.respond(embed=embed)
 
 
