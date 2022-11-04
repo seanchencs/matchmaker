@@ -106,7 +106,7 @@ class Matchmaker(commands.Cog):
                 await interaction.response.edit_message(
                     content=start_msg, view=StartView(timeout=None)
                 )
-            
+
             @discord.ui.button(label="Leave", style=discord.ButtonStyle.danger)
             async def leave_button_cb(self, button, interaction):
                 logger.debug(
@@ -262,7 +262,6 @@ class Matchmaker(commands.Cog):
                     content="✅", ephemeral=True, delete_after=3
                 )
 
-        # TODO: check if match is in progress?
         guild_id = ctx.guild_id
         guild_to_players[guild_id] = set()
         start_msg = get_start_msg(guild_id)
@@ -345,9 +344,7 @@ class Matchmaker(commands.Cog):
         # scaling
         if len(past_ratings) < 30:
             past_ratings = [
-                val
-                for val in past_ratings
-                for _ in range(0, 30 // len(past_ratings))
+                val for val in past_ratings for _ in range(0, 30 // len(past_ratings))
             ]
         elif len(past_ratings) > 60:
             past_ratings = past_ratings[:: len(past_ratings) // 30]
@@ -388,7 +385,9 @@ class Matchmaker(commands.Cog):
         embed.add_field(name="Recent Results", value=short_history, inline=True)
         embed.add_field(name="History", value=match_history, inline=False)
         if history:
-            embed.add_field(name="Graph", value=f"```\n{rating_graph}\n```", inline=False)
+            embed.add_field(
+                name="Graph", value=f"```\n{rating_graph}\n```", inline=False
+            )
         await ctx.respond(embed=embed)
 
 
