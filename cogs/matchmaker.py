@@ -17,7 +17,7 @@ from discord.ext import commands, pages
 from match import Match
 from tabulate import tabulate
 
-guild_to_players = {}  # guild_id : set of players that have clicked Join
+guild_to_players = {}  # guild_id : set of users that have clicked Join
 guild_to_match = {}  # guild_id : Match
 
 logger = logging.getLogger("matchmaker")
@@ -92,7 +92,7 @@ class Matchmaker(commands.Cog):
             )
             return start_msg
 
-        class JoinButton(discord.ui.View):
+        class StartView(discord.ui.View):
             """Discord view for starting games."""
 
             @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
@@ -104,31 +104,21 @@ class Matchmaker(commands.Cog):
                 guild_to_players[guild_id].add(interaction.user)
                 start_msg = get_start_msg(guild_id)
                 await interaction.response.edit_message(
-                    content=start_msg, view=JoinButton(timeout=None)
+                    content=start_msg, view=StartView(timeout=None)
                 )
-                await interaction.followup.send(
-                    content="", view=LeaveMakeButtons(interaction), ephemeral=True
-                )
-
-        class LeaveMakeButtons(discord.ui.View):
-            """Discord view for user who has joined /start. Used ephermerally in response to Join."""
-
-            def __init__(self, parent_interaction):
-                super().__init__(timeout=None)
-                self.parent_interaction = parent_interaction
-
+            
             @discord.ui.button(label="Leave", style=discord.ButtonStyle.danger)
             async def leave_button_cb(self, button, interaction):
                 logger.debug(
                     f"{interaction.user.name} pressed Leave in guild {interaction.guild.name}"
                 )
                 guild_id = interaction.guild_id
-                guild_to_players[guild_id].remove(interaction.user)
+                if interaction.user in guild_to_players[guild_id]:
+                    guild_to_players[guild_id].remove(interaction.user)
                 start_msg = get_start_msg(guild_id)
-                await self.parent_interaction.message.edit(
-                    content=start_msg, view=JoinButton(timeout=None)
+                await interaction.response.edit_message(
+                    content=start_msg, view=StartView(timeout=None)
                 )
-                await interaction.response.edit_message(content="💔", view=None)
 
             @discord.ui.button(label="Start Game", style=discord.ButtonStyle.primary)
             async def make_button_cb(self, button, interaction):
@@ -145,13 +135,10 @@ class Matchmaker(commands.Cog):
 
                 guild_to_match[guild_id] = Match(guild_to_players[guild_id], guild_id)
 
-                await self.parent_interaction.message.edit(
+                await interaction.response.edit_message(
                     content="",
                     embed=Matchmaker.get_match_embed(guild_to_match[guild_id]),
                     view=MatchView(timeout=None),
-                )
-                await interaction.response.edit_message(
-                    content="✅", view=None, delete_after=3
                 )
 
                 guild_to_players[guild_id] = set()
@@ -280,7 +267,7 @@ class Matchmaker(commands.Cog):
         guild_to_players[guild_id] = set()
         start_msg = get_start_msg(guild_id)
 
-        await ctx.respond(start_msg, view=JoinButton(timeout=None))
+        await ctx.respond(start_msg, view=StartView(timeout=None))
 
     @discord.slash_command(name="leaderboard", description="Display the leaderboard.")
     async def leaderboard(self, ctx):
@@ -324,6 +311,7 @@ class Matchmaker(commands.Cog):
                 chunk = history[i : i + 5]
                 embeds = []
                 for match in chunk:
+                    match = Match(guild_id=ctx.guild.id, db_match=match)
                     embed = discord.Embed(description=get_match_summary(match))
                     embeds.append(embed)
                 output.append(pages.Page(title=f"History", embeds=embeds))
