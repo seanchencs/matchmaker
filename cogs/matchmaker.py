@@ -1,5 +1,4 @@
 import logging
-from math import ceil
 
 import discord
 import trueskill as ts
@@ -64,7 +63,11 @@ class Matchmaker(commands.Cog):
         team_a = [f"\t<@!{id}> ({team_a_rating_delta[id]:+.2f})" for id in match.team_a]
         team_b = [f"\t<@!{id}> ({team_b_rating_delta[id]:+.2f})" for id in match.team_b]
 
-        embed = discord.Embed(title=match.get_title(), colour=discord.Colour.gold())
+        embed = discord.Embed(
+            title=match.get_title(),
+            description=match.get_time_string(),
+            colour=discord.Colour.gold(),
+        )
         embed.add_field(
             name=f"Team A {'👑' if match.team_a_score > match.team_b_score else ''}",
             value="\n".join(team_a),
@@ -133,7 +136,9 @@ class Matchmaker(commands.Cog):
                     )
                     return
 
-                guild_to_match[guild_id] = Match(guild_to_players[guild_id], guild_id)
+                guild_to_match[guild_id] = Match(
+                    players=guild_to_players[guild_id], guild_id=guild_id
+                )
 
                 await interaction.response.edit_message(
                     content="",
@@ -310,8 +315,8 @@ class Matchmaker(commands.Cog):
                 chunk = history[i : i + 5]
                 embeds = []
                 for match in chunk:
-                    match = Match(guild_id=ctx.guild.id, db_match=match)
-                    embed = discord.Embed(description=get_match_summary(match))
+                    match = Match(players=None, guild_id=ctx.guild.id, db_match=match)
+                    embed = Matchmaker.get_post_match_embed(match)
                     embeds.append(embed)
                 output.append(pages.Page(title=f"History", embeds=embeds))
             return output
