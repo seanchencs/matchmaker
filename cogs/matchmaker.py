@@ -1,19 +1,14 @@
-import logging
+"""
+Pycord Cog for matchmaking commands.
+"""
 
+import logging
 import discord
 import trueskill as ts
 from asciichartpy import plot
-from backend import (
-    get_history,
-    get_match_summary,
-    get_past_ratings,
-    get_playerlist,
-    get_ranks,
-    get_rating,
-    get_win_loss,
-)
+from lib.backend import *
 from discord.ext import commands, pages
-from match import Match
+from lib.match import Match
 from tabulate import tabulate
 
 guild_to_players = {}  # guild_id : set of users that have clicked Join

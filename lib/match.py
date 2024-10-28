@@ -1,7 +1,7 @@
 from datetime import datetime
 import discord
 from typing import Dict, Optional, Set
-from backend import make_teams, record_result
+from lib.backend import make_teams, record_result
 
 
 class Match:

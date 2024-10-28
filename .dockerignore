@@ -1,0 +1,29 @@
+# Ignore Python cache and environment files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+.venv/
+
+# Ignore development and testing files
+tests/
+docs/
+*.md
+todo
+
+# Ignore version control directories
+.git/
+.gitignore
+
+# Ignore Dockerfile itself (optional)
+Dockerfile
+.dockerignore
+
+# Ignore Windows FFMPEG binary
+ffmpeg.exe
+
+# Ignore runtime logs, db files
+*.log
+*.db
+*.prof

@@ -8,3 +8,7 @@ __pycache__/
 config.py
 profiling.prof
 .poetry_cache
+*.exe
+*.prof
+*.lock
+cogs/gpt_cog.py

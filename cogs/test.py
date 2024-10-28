@@ -3,7 +3,7 @@ import random
 import discord
 from discord.ext import commands
 from discord.commands import default_permissions
-from match import Match
+from lib.match import Match
 from .matchmaker import Matchmaker
 
 

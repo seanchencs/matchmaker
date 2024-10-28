@@ -6,20 +6,20 @@ from math import isclose
 import trueskill as ts
 from sqlitedict import SqliteDict
 
-from CustomTrueSkill import rate_with_round_score, win_probability
+from lib.CustomTrueSkill import rate_with_round_score, win_probability
 
 
 def delete_db(guildid):
     """Delete the db belong to guildid."""
     guildid = str(guildid)
-    os.remove(f"{guildid}.db")
+    os.remove(os.path.join("data", f"{guildid}.db"))
 
 
 def db_string(guildid):
     """Returns full db as string."""
     output = []
     guildid = str(guildid)
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         for key in db.keys():
             output.append(key)
             output.append(str(db[key]))
@@ -29,7 +29,7 @@ def db_string(guildid):
 def get_playerlist(guildid):
     """Get list of all userids in guild with ratings."""
     players = []
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "ratings" not in db:
             db["ratings"] = {}
         players = [uid for uid in db["ratings"]]
@@ -42,7 +42,7 @@ def get_rating(userid, guildid):
     guildid = str(guildid)
     rating = None
 
-    with SqliteDict(str(guildid) + ".db", autocommit=True) as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db"), autocommit=True) as db:
         if "ratings" not in db:
             db["ratings"] = {}
         ratings = db["ratings"]
@@ -67,7 +67,7 @@ def get_ratings(users, guildid):
     """Returns dictionary of id to rating for users."""
     output = {}
     current_time = datetime.now()
-    with SqliteDict(str(guildid) + ".db", autocommit=True) as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db"), autocommit=True) as db:
         if "ratings" not in db:
             db["ratings"] = {}
         ratings = db["ratings"]
@@ -109,7 +109,7 @@ def set_rating(userid, rating, guildid):
     userid = str(userid)
     guildid = str(guildid)
     # write to shelve persistent db
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "ratings" not in db:
             db["ratings"] = {}
         ratings = db["ratings"]
@@ -121,7 +121,7 @@ def set_rating(userid, rating, guildid):
 def set_ratings(user_ratings, guildid):
     """Set the rating of multiple users."""
     guildid = str(guildid)
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "ratings" not in db:
             db["ratings"] = {}
         ratings = db["ratings"]
@@ -148,7 +148,7 @@ def record_result(team_a, team_b, team_a_score, team_b_score, guildid):
     set_ratings(team_b_new, guildid)
 
     # record in match history
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "history" not in db:
             db["history"] = []
         history = db["history"]
@@ -207,7 +207,7 @@ def get_win_loss(userid, guildid):
     userid = str(userid)
     guildid = str(guildid)
     wins, losses = 0, 0
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "history" in db:
             for match in db["history"]:
                 if userid in match["team_a"]:
@@ -244,7 +244,7 @@ def time_since_last_match(userid, guildid, db, current_time=datetime.now()):
 
 def get_history(guildid, userid=None):
     """Fetch list of matches for guild or specified user in guild."""
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "history" not in db or not db["history"]:
             history = None
         elif userid:
@@ -269,7 +269,7 @@ def get_past_ratings(userid, guildid, pad=False):
     """Get a list of past ratings(mu) for a user."""
     guildid = str(guildid)
     past_ratings = []
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "history" in db:
             if pad:
                 history = db["history"]
@@ -321,7 +321,7 @@ def get_ranks(players, guildid, metric="exposure"):
 def get_leaderboard(guildid):
     """Gets list of userids and TrueSkill ratings, sorted by current rating."""
     guildid = str(guildid)
-    with SqliteDict(str(guildid) + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "ratings" in db:
             ratings = {
                 str(id): get_rating(str(id), guildid) for id in db["ratings"].keys()
@@ -350,7 +350,7 @@ def undo_last_match(guildid):
     """Rollback to before the last recorded result."""
     guildid = str(guildid)
     match = None
-    with SqliteDict(guildid + ".db") as db:
+    with SqliteDict(os.path.join("data", f"{guildid}.db")) as db:
         if "history" not in db or not db["history"]:
             print("history not found in db")
             return None
