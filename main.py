@@ -43,7 +43,7 @@ async def on_ready():
 # load cogs
 bot.load_extension("cogs.matchmaker")
 bot.load_extension("cogs.music")
-# bot.load_extension("cogs.gpt_cog")
+bot.load_extension("cogs.ai")
 if show_test_commands:
     bot.load_extension("cogs.test")
 

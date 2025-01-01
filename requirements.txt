@@ -7,4 +7,4 @@ tabulate==0.8.9
 sqlitedict==2.1.0
 yt_dlp==2024.5.27
 async_timeout
-
+openai==1.58.1
