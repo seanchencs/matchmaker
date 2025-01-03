@@ -34,7 +34,7 @@ class AI(commands.Cog):
                 msg_content = msg_content.replace(f'<#{channel.id}>', f'#{channel.name}')
             history.append(f"{msg.author.name}: {msg_content}")
         
-        if self.bot.user.mentioned_in(message):
+        if self.bot.user.mentioned_in(message) and not message.mention_everyone:
             async with message.channel.typing():
                 response = self.LLM.generate(chat_history=history, prompt=llm_prompt)
             if response:
@@ -57,6 +57,6 @@ class AI(commands.Cog):
             return
 
 def setup(bot):
-    model = llm_model
+    model = os.getenv("LLM_MODEL", llm_model)
     key = os.getenv("LLM_KEY")
     bot.add_cog(AI(bot, key, model))
